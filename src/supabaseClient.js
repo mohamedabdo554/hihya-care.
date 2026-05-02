@@ -8,7 +8,45 @@ const createFailureResult = (message) => ({
 	error: new Error(message),
 })
 
+const createAuthFailureResult = (message) => ({
+	data: {
+		session: null,
+		user: null,
+	},
+	error: new Error(message),
+})
+
 const createFallbackClient = () => ({
+	auth: {
+		getSession() {
+			return Promise.resolve(createAuthFailureResult(
+				'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable authentication.',
+			))
+		},
+		signInWithOtp() {
+			return Promise.resolve(createAuthFailureResult(
+				'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable authentication.',
+			))
+		},
+		signOut() {
+			return Promise.resolve(createAuthFailureResult(
+				'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable authentication.',
+			))
+		},
+		onAuthStateChange(callback) {
+			if (typeof callback === 'function') {
+				queueMicrotask(() => callback('SIGNED_OUT', null))
+			}
+
+			return {
+				data: {
+					subscription: {
+						unsubscribe() {},
+					},
+				},
+			}
+		},
+	},
 	from() {
 		const builder = {
 			select() {
@@ -22,6 +60,13 @@ const createFallbackClient = () => ({
 			},
 			limit() {
 				return builder
+			},
+			update() {
+				return Promise.resolve(
+					createFailureResult(
+						'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable dashboard updates.',
+					),
+				)
 			},
 			maybeSingle() {
 				return Promise.resolve(

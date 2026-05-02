@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BrowserRouter,
   Link,
@@ -8,25 +9,27 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import DashboardPortfolio from './components/DashboardPortfolio.jsx'
-import { Auth } from './Auth.jsx'
+import PremiumDoctorProfile from './components/PremiumDoctorProfile.jsx'
 import { supabase } from './supabaseClient.js'
 
 const defaultLanguage = 'en'
 const defaultTheme = 'light'
+const queryClient = new QueryClient()
 
 const translations = {
   en: {
@@ -66,22 +69,52 @@ const translations = {
     selectedDoctor: 'Selected Doctor',
     bookingPatientName: 'Patient Name',
     bookingPhone: 'Phone Number',
+    bookingAppointmentDate: 'Appointment Date',
     bookingPlaceholderName: 'Enter patient full name',
     bookingPlaceholderPhone: 'Enter contact number',
+    bookingPlaceholderDate: 'Choose date and time',
+    bookingDateHint: 'Pick when the appointment should take place.',
     confirmBooking: 'Confirm Booking',
     finalizingBooking: 'Finalizing Booking',
     readyStatus: 'Ready for a new booking',
     successTitle: 'Appointment secured',
     errorTitle: 'Submission needs attention',
     successMessage: 'Booking confirmed and stored in the appointment ledger.',
+    bookingToastTitle: 'Booking confirmed',
+    bookingToastBody: 'The appointment was saved and the WhatsApp handoff is ready.',
     whatsappCta: 'Chat with Clinic on WhatsApp',
     whatsappMissing: 'Doctor WhatsApp number is missing from the database.',
+    whatsappQueued: 'WhatsApp notification queued for the doctor.',
+    whatsappFallback: 'WhatsApp API endpoint is not configured. Use the chat link instead.',
     dashboardLogin: 'Doctor Login Simulation',
+    dashboardAuthTitle: 'Secure doctor access',
+    dashboardAuthIntro: 'Use a magic link or OTP to verify the session before loading the queue.',
+    dashboardEmail: 'Email',
+    dashboardEmailPlaceholder: 'doctor@hihyacare.com',
+    sendMagicLink: 'Send Magic Link',
+    dashboardOtpSent: 'Check your email for the login link or OTP.',
+    dashboardOtpError: 'Could not send the OTP right now.',
+    dashboardSessionActive: 'Supabase session active',
+    dashboardCodeGateTitle: 'Doctor code',
+    dashboardCodeGateIntro: 'Enter the private code that maps the session to one doctor.',
+    clinicMapLink: 'Clinic location link',
     dashboardTitle: doctorName => (doctorName ? `${doctorName} Dashboard` : 'Doctor Dashboard'),
     dashboardIntro:
       'A private intake view filtered to one doctor. Only appointments with a matching doctor_id are displayed here.',
     appointmentsTitle: 'Appointments',
     appointmentsSubtitle: 'Filtered by doctor_id',
+    appointmentsOverview: 'Appointments Overview',
+    analyticsTitle: 'Analytics',
+    analyticsIntro: 'Tracked from the live appointment ledger and refreshed after each booking.',
+    exportReport: 'Export CSV',
+    monthlyReport: 'Monthly performance',
+    currentMonth: 'Current month',
+    todayPatients: "Today's Patients", 
+    monthPatients: 'This Month',
+    revenueEstimate: 'Revenue Estimate',
+    statusBreakdown: 'Status Breakdown',
+    peakDay: 'Peak Day',
+    monthlyTrends: 'Monthly Trends',
     liveQueue: 'Live Queue',
     totalWaiting: 'Total Waiting',
     doctorId: 'Doctor ID',
@@ -124,14 +157,6 @@ const translations = {
     toggleStatus: 'Toggle Status',
     statusUpdated: 'Status updated',
     dashboardCodeHelper: 'Each code maps to one doctor and one filtered queue.',
-    otpLoginTitle: 'Secure Doctor Login',
-    otpLoginIntro: 'Enter your registered email to receive a magic link or OTP for secure access.',
-    enterEmail: 'Enter your email',
-    sendOtp: 'Send Magic Link / OTP',
-    checkingOtp: 'Checking OTP...',
-    otpSentSuccess: 'Magic link/OTP sent! Check your email.',
-    otpLoginError: 'Failed to send magic link/OTP. Please try again.',
-    invalidEmail: 'Please enter a valid email address.',
   },
   ar: {
     navBrand: 'هيها كير',
@@ -170,22 +195,52 @@ const translations = {
     selectedDoctor: 'الطبيب المختار',
     bookingPatientName: 'اسم المريض',
     bookingPhone: 'رقم الهاتف',
+    bookingAppointmentDate: 'تاريخ ووقت الموعد',
     bookingPlaceholderName: 'اكتب الاسم الكامل للمريض',
     bookingPlaceholderPhone: 'اكتب رقم التواصل',
+    bookingPlaceholderDate: 'اختر التاريخ والوقت',
+    bookingDateHint: 'اختر الوقت الذي يجب أن يتم فيه الموعد.',
     confirmBooking: 'تأكيد الحجز',
     finalizingBooking: 'جارٍ إنهاء الحجز',
     readyStatus: 'جاهز لحجز جديد',
     successTitle: 'تم تأكيد الموعد',
     errorTitle: 'يحتاج الإرسال إلى مراجعة',
     successMessage: 'تم حفظ الحجز بنجاح في سجل المواعيد.',
+    bookingToastTitle: 'تم تأكيد الحجز',
+    bookingToastBody: 'تم حفظ الموعد وتجهيز الإحالة إلى واتساب.',
     whatsappCta: 'تحدث مع العيادة على واتساب',
     whatsappMissing: 'رقم واتساب الطبيب غير موجود في قاعدة البيانات.',
+    whatsappQueued: 'تم تجهيز إشعار واتساب للطبيب.',
+    whatsappFallback: 'واجهة WhatsApp API غير مهيأة. استخدم رابط المحادثة بدلًا من ذلك.',
     dashboardLogin: 'محاكاة دخول الطبيب',
+    dashboardAuthTitle: 'دخول آمن للطبيب',
+    dashboardAuthIntro: 'استخدم رابطًا سحريًا أو رمز OTP لتأكيد الجلسة قبل تحميل الطابور.',
+    dashboardEmail: 'البريد الإلكتروني',
+    dashboardEmailPlaceholder: 'doctor@hihyacare.com',
+    sendMagicLink: 'إرسال الرابط السحري',
+    dashboardOtpSent: 'تفقد بريدك للحصول على رابط الدخول أو رمز OTP.',
+    dashboardOtpError: 'تعذر إرسال رمز OTP الآن.',
+    dashboardSessionActive: 'جلسة Supabase نشطة',
+    dashboardCodeGateTitle: 'رمز الطبيب',
+    dashboardCodeGateIntro: 'أدخل الرمز الخاص لربط الجلسة بطبيب واحد.',
+    clinicMapLink: 'رابط موقع العيادة',
     dashboardTitle: doctorName => (doctorName ? `لوحة ${doctorName}` : 'لوحة الطبيب'),
     dashboardIntro:
       'عرض خاص للطبيب فقط، يعرض المواعيد المرتبطة بنفس doctor_id الموجود في الرابط.',
     appointmentsTitle: 'المواعيد',
     appointmentsSubtitle: 'مفلترة حسب doctor_id',
+    appointmentsOverview: 'ملخص المواعيد',
+    analyticsTitle: 'التحليلات',
+    analyticsIntro: 'يتم تتبعها من سجل المواعيد الفعلي وتحديثها بعد كل حجز.',
+    exportReport: 'تصدير CSV',
+    monthlyReport: 'الأداء الشهري',
+    currentMonth: 'الشهر الحالي',
+    todayPatients: 'مرضى اليوم',
+    monthPatients: 'هذا الشهر',
+    revenueEstimate: 'تقدير الإيراد',
+    statusBreakdown: 'توزيع الحالات',
+    peakDay: 'اليوم الأعلى',
+    monthlyTrends: 'الاتجاه الشهري',
     liveQueue: 'الصف الحي',
     totalWaiting: 'إجمالي المنتظرين',
     doctorId: 'معرّف الطبيب',
@@ -228,18 +283,30 @@ const translations = {
     toggleStatus: 'تبديل الحالة',
     statusUpdated: 'تم تحديث الحالة',
     dashboardCodeHelper: 'كل رمز يرتبط بطبيب واحد وبطابور مواعيد خاص به.',
-    otpLoginTitle: 'تسجيل دخول آمن للطبيب',
-    otpLoginIntro: 'أدخل بريدك الإلكتروني المسجل لتلقي رابط سحري أو كلمة مرور لمرة واحدة للوصول الآمن.',
-    enterEmail: 'أدخل بريدك الإلكتروني',
-    sendOtp: 'إرسال رابط سحري / كلمة مرور لمرة واحدة',
-    checkingOtp: 'جارٍ التحقق من كلمة المرور لمرة واحدة...',
-    otpSentSuccess: 'تم إرسال الرابط السحري/كلمة المرور لمرة واحدة! تحقق من بريدك الإلكتروني.',
-    otpLoginError: 'فشل في إرسال الرابط السحري/كلمة المرور لمرة واحدة. الرجاء المحاولة مرة أخرى.',
-    invalidEmail: 'الرجاء إدخال عنوان بريد إلكتروني صالح.',
   },
 }
 
 const fallbackDoctors = [
+  {
+    id: 'dr-mohamed-alafandi',
+    name: 'د. محمد الافندي',
+    name_en: 'Dr. Mohamed Al-Afandi',
+    name_ar: 'د. محمد الافندي',
+    specialty: 'جراحة عامة ومسالك بولية',
+    specialty_en: 'General Surgery & Urology',
+    specialty_ar: 'جراحة عامة ومسالك بولية',
+    image_url: null,
+    bio: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة.',
+    bio_en: '20 years of experience in general surgery and urology. Address: near the old National Bank, next to Dr. Gomaa Pharmacy.',
+    bio_ar: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة.',
+    price: 'استشارة حسب الكشف',
+    clinicLocation: 'عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة',
+    clinicLocation_en: 'Near the old National Bank, next to Dr. Gomaa Pharmacy',
+    clinicLocation_ar: 'عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة',
+    clinic_link: 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
+    phone_number: null,
+    secret_code: 'HC-2026',
+  },
   {
     id: 'dr-elya-nassar',
     name: 'Dr. Elya Nassar',
@@ -352,11 +419,14 @@ function writeLocalAppointments(appointments) {
 }
 
 function createLocalAppointment(doctorId, patientName, phone) {
+  const appointmentDate = new Date().toISOString()
+
   return {
     id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     patient_name: patientName,
     phone,
-    time: new Date().toISOString(),
+    appointment_date: appointmentDate,
+    time: appointmentDate,
     status: 'Pending',
     doctor_id: doctorId,
     source: 'local',
@@ -453,10 +523,20 @@ function makeDoctorFromRow(row) {
   return {
     id: String(row.id),
     name: row.name,
+    name_en: row.name_en ?? null,
+    name_ar: row.name_ar ?? null,
     specialty: row.specialty || 'Specialist',
+    specialty_en: row.specialty_en ?? null,
+    specialty_ar: row.specialty_ar ?? null,
     image_url: row.image_url ?? null,
     bio: row.bio ?? null,
+    bio_en: row.bio_en ?? null,
+    bio_ar: row.bio_ar ?? null,
     price: row.price ? String(row.price) : 'Consultation on request',
+    clinicLocation: row.clinicLocation ?? row.location ?? null,
+    clinicLocation_en: row.clinicLocation_en ?? null,
+    clinicLocation_ar: row.clinicLocation_ar ?? null,
+    clinic_link: row.clinic_link ?? null,
     phone_number: row.phone_number ?? null,
     secret_code: row.secret_code ?? null,
   }
@@ -468,16 +548,21 @@ function localizeDoctor(language, doctor) {
   }
 
   const specialty = doctor.specialty || 'Specialist'
-  const translatedSpecialty = specialtyMap[language]?.[specialty] || specialty
-  const fallbackBio = bioMap[language]?.[specialty] || bioMap[language]?.Specialist
-  const translatedLocation = locationMap[language]?.[specialty] || locationMap[language]?.Specialist
+  const translatedSpecialty = (language === 'ar' ? doctor.specialty_ar : doctor.specialty_en) || specialtyMap[language]?.[specialty] || specialty
+  const fallbackBio = (language === 'ar' ? doctor.bio_ar : doctor.bio_en) || bioMap[language]?.[specialty] || bioMap[language]?.Specialist
+  const translatedLocation =
+    (language === 'ar' ? doctor.clinicLocation_ar : doctor.clinicLocation_en) ||
+    doctor.clinicLocation ||
+    locationMap[language]?.[specialty] ||
+    locationMap[language]?.Specialist
 
   return {
     ...doctor,
+    name: (language === 'ar' ? doctor.name_ar : doctor.name_en) || doctor.name,
     specialty: translatedSpecialty,
-    bio: language === 'ar' ? fallbackBio : doctor.bio || fallbackBio,
-    clinicLocation: language === 'ar' ? translatedLocation : doctor.clinicLocation || translatedLocation,
-    experience: language === 'ar' ? fallbackBio : doctor.experience || fallbackBio,
+    bio: fallbackBio,
+    clinicLocation: translatedLocation,
+    experience: doctor.experience || fallbackBio,
   }
 }
 
@@ -502,6 +587,7 @@ function createFallbackAppointments(doctorId, language) {
     return base.map((appointment, index) => ({
       id: `${appointment.doctor_id}-${index}`,
       status: appointment.status || 'Pending',
+      appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
       time: appointment.time || '09:00',
       ...appointment,
     }))
@@ -509,13 +595,171 @@ function createFallbackAppointments(doctorId, language) {
 
   return language === 'ar'
     ? [
-        { id: `${doctorId}-1`, patient_name: 'أية محمود', phone: '+201055501234', doctor_id: doctorId, status: 'Pending', time: '09:00' },
-        { id: `${doctorId}-2`, patient_name: 'مينا عادل', phone: '+201066602345', doctor_id: doctorId, status: 'In Clinic', time: '09:20' },
+        { id: `${doctorId}-1`, patient_name: 'أية محمود', phone: '+201055501234', doctor_id: doctorId, status: 'Pending', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
+        { id: `${doctorId}-2`, patient_name: 'مينا عادل', phone: '+201066602345', doctor_id: doctorId, status: 'In Clinic', appointment_date: '2026-05-02T09:20:00.000Z', time: '09:20' },
       ]
     : [
-        { id: `${doctorId}-1`, patient_name: 'Aya Mahmoud', phone: '+201055501234', doctor_id: doctorId, status: 'Pending', time: '09:00' },
-        { id: `${doctorId}-2`, patient_name: 'Mina Adel', phone: '+201066602345', doctor_id: doctorId, status: 'In Clinic', time: '09:20' },
+        { id: `${doctorId}-1`, patient_name: 'Aya Mahmoud', phone: '+201055501234', doctor_id: doctorId, status: 'Pending', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
+        { id: `${doctorId}-2`, patient_name: 'Mina Adel', phone: '+201066602345', doctor_id: doctorId, status: 'In Clinic', appointment_date: '2026-05-02T09:20:00.000Z', time: '09:20' },
       ]
+}
+
+function parseAppointmentDate(appointment) {
+  const rawValue = appointment?.appointment_date || appointment?.time || appointment?.created_at || ''
+
+  if (!rawValue) {
+    return new Date()
+  }
+
+  if (typeof rawValue === 'string' && /^\d{2}:\d{2}$/.test(rawValue)) {
+    const [hours, minutes] = rawValue.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours, minutes, 0, 0)
+    return date
+  }
+
+  const parsedDate = new Date(rawValue)
+  return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate
+}
+
+function formatAppointmentDate(appointment, language) {
+  const date = parseAppointmentDate(appointment)
+  return date.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function toDatetimeLocalValue(appointmentDate) {
+  if (!appointmentDate) {
+    return ''
+  }
+
+  const date = appointmentDate instanceof Date ? appointmentDate : new Date(appointmentDate)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const pad = value => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function parsePriceValue(price) {
+  const match = String(price || '').match(/\d+(?:\.\d+)?/)
+  return match ? Number(match[0]) : 0
+}
+
+function getAppointmentDayKey(appointment) {
+  const date = parseAppointmentDate(appointment)
+  return date.toLocaleDateString('en-CA')
+}
+
+function getAppointmentMonthKey(appointment) {
+  const date = parseAppointmentDate(appointment)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function formatMonthKey(date, language) {
+  return date.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function buildAnalyticsSummary(appointments, doctor, language) {
+  const monthPrice = parsePriceValue(doctor?.price)
+  const todayKey = new Date().toLocaleDateString('en-CA')
+  const currentMonthKey = getAppointmentMonthKey({ appointment_date: new Date().toISOString() })
+  const currentMonthAppointments = appointments.filter(appointment => getAppointmentMonthKey(appointment) === currentMonthKey)
+  const todayAppointments = appointments.filter(appointment => getAppointmentDayKey(appointment) === todayKey)
+  const completedThisMonth = currentMonthAppointments.filter(appointment => appointment.status === 'Completed').length
+
+  const monthSeries = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date()
+    date.setDate(1)
+    date.setMonth(date.getMonth() - (5 - index))
+
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const monthAppointments = appointments.filter(appointment => getAppointmentMonthKey(appointment) === monthKey)
+
+    return {
+      key: monthKey,
+      label: formatMonthKey(date, language),
+      appointments: monthAppointments.length,
+      completed: monthAppointments.filter(appointment => appointment.status === 'Completed').length,
+      waiting: monthAppointments.filter(appointment => appointment.status !== 'Completed').length,
+      revenue: monthAppointments.filter(appointment => appointment.status === 'Completed').length * monthPrice,
+    }
+  })
+
+  const weekdayCounts = Array.from({ length: 7 }, (_, index) => index).map(dayIndex => {
+    const weekdayAppointments = appointments.filter(appointment => parseAppointmentDate(appointment).getDay() === dayIndex)
+    const date = new Date()
+    date.setDate(date.getDate() + ((dayIndex + 7 - date.getDay()) % 7))
+
+    return {
+      key: String(dayIndex),
+      label: date.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' }),
+      count: weekdayAppointments.length,
+    }
+  })
+
+  const statusBreakdown = appointmentStatusOrder.map(status => ({
+    label: localizeAppointmentStatus(language, status),
+    value: appointments.filter(appointment => appointment.status === status).length,
+  }))
+
+  return {
+    todayPatients: todayAppointments.length,
+    currentMonthPatients: currentMonthAppointments.length,
+    completedThisMonth,
+    revenueEstimate: completedThisMonth * monthPrice,
+    monthSeries,
+    weekdayCounts,
+    statusBreakdown,
+  }
+}
+
+function buildAppointmentCsvRows(appointments, doctor, language) {
+  const headers = language === 'ar'
+    ? ['الموعد', 'الاسم', 'الهاتف', 'الحالة', 'الطبيب', 'الرمز']
+    : ['Appointment Date', 'Patient Name', 'Phone', 'Status', 'Doctor', 'Code']
+
+  const rows = [headers]
+
+  appointments.forEach(appointment => {
+    rows.push([
+      formatAppointmentDate(appointment, language),
+      appointment.patient_name || '',
+      appointment.phone || '',
+      localizeAppointmentStatus(language, appointment.status),
+      doctor?.name || '',
+      doctor?.secret_code || '',
+    ])
+  })
+
+  return rows
+}
+
+function downloadCsv(filename, rows) {
+  const csvContent = rows
+    .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+
+  anchor.href = url
+  anchor.download = filename
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  window.URL.revokeObjectURL(url)
 }
 
 function HihyaEmblem({ theme = 'light' }) {
@@ -649,18 +893,20 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage doctors={doctors} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
-        <Route path="/portfolio" element={<DashboardPortfolio />} />
-        <Route path="/doctor/:doctorId" element={<DoctorProfilePage loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
-        <Route path="/book/:doctorId" element={<BookingPage doctorLookup={doctorLookup} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
-        <Route path="/auth" element={<Auth ui={{ ...ui, getText }} />} />
-        <Route path="/dashboard" element={<DashboardAccessPage ui={ui} />} />
-        <Route path="/dashboard/:doctorId" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomePage doctors={doctors} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
+          <Route path="/portfolio" element={<DashboardPortfolio />} />
+          <Route path="/doctor/premium-preview" element={<PremiumDoctorProfile />} />
+          <Route path="/doctor/:doctorId" element={<DoctorProfilePage loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
+          <Route path="/book/:doctorId" element={<BookingPage doctorLookup={doctorLookup} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
+          <Route path="/dashboard" element={<DashboardAccessPage ui={ui} />} />
+          <Route path="/dashboard/:doctorId" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
 }
 
@@ -973,6 +1219,7 @@ function DoctorProfilePage({ loading, notice, ui }) {
   const { doctorId } = useParams()
   const navigate = useNavigate()
   const { doctor, loading: doctorLoading, notice: doctorNotice } = useDoctorById(doctorId, ui.language)
+  const clinicMapHref = doctor?.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9'
 
   if (!doctor) {
     return (
@@ -1017,6 +1264,17 @@ function DoctorProfilePage({ loading, notice, ui }) {
             <InfoPanel label={t('experience')} value={doctor.experience || doctor.bio || getText(ui.language, 'doctorFallbackBio')} />
             <InfoPanel label={t('clinicLocation')} value={doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيها كير' : 'Hihya Care main wing')} />
             <InfoPanel label={t('price')} value={doctor.price} />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a
+              href={clinicMapHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-5 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-400/15 dark:text-cyan-100"
+            >
+              {t('clinicMapLink')}
+            </a>
           </div>
 
           <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] dark:border-white/10 dark:bg-slate-950/60">
@@ -1073,87 +1331,109 @@ function DoctorProfilePage({ loading, notice, ui }) {
 }
 
 function useAppointmentsByDoctorId(doctorId, language) {
-  const [appointments, setAppointments] = useState([])
-  const [notice, setNotice] = useState('')
-
-  const appointmentsQuery = useQuery(
-    ['appointments', doctorId, language],
-    async () => {
+  const appointmentsQuery = useQuery({
+    queryKey: ['appointments', doctorId, language],
+    enabled: Boolean(doctorId),
+    queryFn: async () => {
       if (!doctorId) {
-        return []
+        return { appointments: [], notice: '' }
       }
 
       const { data, error } = await supabase
         .from('appointments')
-        .select('id, patient_name, phone, time, status, doctor_id, created_at')
+        .select('id, patient_name, phone, appointment_date, time, status, doctor_id')
         .eq('doctor_id', doctorId)
-        .order('time', { ascending: true })
+        .order('appointment_date', { ascending: true })
 
       if (error || !Array.isArray(data)) {
-        throw error || new Error('Unable to load appointments')
+        return {
+          appointments: createFallbackAppointments(doctorId, language),
+          notice: getText(language, 'appointmentsFallbackNotice'),
+        }
       }
 
-      return data.map((appointment, index) => ({
+      const remoteAppointments = data.map((appointment, index) => ({
         ...appointment,
         id: appointment.id ?? `${appointment.doctor_id}-${index}`,
         status: appointment.status || 'Pending',
+        appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
         time: appointment.time || '09:00',
-        created_at: appointment.created_at || appointment.time || new Date().toISOString(),
       }))
+
+      const localAppointments = getLocalAppointmentsForDoctor(doctorId).map((appointment, index) => ({
+        ...appointment,
+        id: appointment.id || `local-${doctorId}-${index}`,
+        status: appointment.status || 'Pending',
+        appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
+        time: appointment.time || '09:00',
+      }))
+
+      const mergedAppointments = [...remoteAppointments]
+      const existingIds = new Set(remoteAppointments.map(appointment => appointment.id))
+      mergedAppointments.push(...localAppointments.filter(appointment => !existingIds.has(appointment.id)))
+
+      mergedAppointments.sort((left, right) => parseAppointmentDate(left).getTime() - parseAppointmentDate(right).getTime())
+
+      return {
+        appointments: mergedAppointments,
+        notice: '',
+      }
     },
-    {
-      enabled: !!doctorId,
-      staleTime: 1000 * 60,
-      cacheTime: 1000 * 60 * 5,
-      onError: () => {
-        setNotice(getText(language, 'appointmentsFallbackNotice'))
-      },
-      onSuccess: data => {
-        setNotice('')
-      },
-    },
-  )
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  })
 
-  useEffect(() => {
-    if (!doctorId) {
-      setAppointments([])
-      return
-    }
+  const queryCache = useQueryClient()
 
-    const localAppointments = getLocalAppointmentsForDoctor(doctorId).map((appointment, index) => ({
-      ...appointment,
-      id: appointment.id || `local-${doctorId}-${index}`,
-      status: appointment.status || 'Pending',
-      time: appointment.time || '09:00',
-      created_at: appointment.created_at || appointment.time || new Date().toISOString(),
-    }))
+  const setAppointments = updater => {
+    queryCache.setQueryData(['appointments', doctorId, language], previous => {
+      const currentAppointments = previous?.appointments || []
+      const nextAppointments = typeof updater === 'function' ? updater(currentAppointments) : updater
 
-    const remoteAppointments = appointmentsQuery.data || []
-    const existingIds = new Set(remoteAppointments.map(appointment => appointment.id))
-    const nextAppointments = [...remoteAppointments, ...localAppointments.filter(appointment => !existingIds.has(appointment.id))]
-      .sort((left, right) => String(left.time).localeCompare(String(right.time)))
+      return {
+        ...(previous || {}),
+        appointments: nextAppointments,
+      }
+    })
+  }
 
-    setAppointments(nextAppointments)
-  }, [doctorId, language, appointmentsQuery.data])
-
-  return { appointments, setAppointments, loading: appointmentsQuery.isLoading, notice }
+  return {
+    appointments: appointmentsQuery.data?.appointments || [],
+    setAppointments,
+    loading: appointmentsQuery.isLoading,
+    notice: appointmentsQuery.data?.notice || '',
+  }
 }
 
 function BookingPage({ doctorLookup, loading, notice, ui }) {
   const t = key => getText(ui.language, key)
   const { doctorId } = useParams()
   const navigate = useNavigate()
+  const queryCache = useQueryClient()
   const [patientName, setPatientName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [appointmentDate, setAppointmentDate] = useState(() => toDatetimeLocalValue(new Date()))
   const [status, setStatus] = useState('idle')
   const [feedback, setFeedback] = useState('')
+  const [toast, setToast] = useState(null)
 
   const doctor = doctorId ? doctorLookup.get(doctorId) : null
   const selectedDoctor = doctor ? localizeDoctor(ui.language, doctor) : (doctorId ? localizeDoctor(ui.language, createFallbackDoctor(doctorId)) : null)
 
   const whatsappLink = selectedDoctor?.phone_number
-    ? `https://wa.me/${normalizePhoneForWa(selectedDoctor.phone_number)}`
+    ? `https://wa.me/${normalizePhoneForWa(selectedDoctor.phone_number)}?text=${encodeURIComponent(
+        `Hello Hihya Care, I just booked an appointment with ${selectedDoctor.name} via the platform.`,
+      )}`
     : ''
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), 4200)
+    return () => window.clearTimeout(timeoutId)
+  }, [toast])
 
   const handleSubmit = async event => {
     event.preventDefault()
@@ -1166,10 +1446,15 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
     const trimmedName = patientName.trim()
     const trimmedPhone = phoneNumber.trim()
+    const trimmedAppointmentDate = appointmentDate.trim()
 
-    if (!trimmedName || !trimmedPhone) {
+    if (!trimmedName || !trimmedPhone || !trimmedAppointmentDate) {
       setStatus('error')
-      setFeedback(ui.language === 'ar' ? 'يرجى إدخال اسم المريض ورقم الهاتف.' : 'Please enter both patient name and phone number.')
+      setFeedback(
+        ui.language === 'ar'
+          ? 'يرجى إدخال اسم المريض ورقم الهاتف وتاريخ الموعد.'
+          : 'Please enter the patient name, phone number, and appointment date.',
+      )
       return
     }
 
@@ -1182,7 +1467,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
           patient_name: trimmedName,
           phone: trimmedPhone,
           doctor_id: doctorId,
-          time: new Date().toISOString(),
+          appointment_date: new Date(trimmedAppointmentDate).toISOString(),
           status: 'Pending',
         },
       ])
@@ -1191,20 +1476,77 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         throw error
       }
 
+      if (selectedDoctor.phone_number) {
+        const whatsappApiUrl = String(import.meta.env.VITE_WHATSAPP_API_URL || '').trim()
+
+        if (whatsappApiUrl) {
+          try {
+            await fetch(whatsappApiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                doctor_id: selectedDoctor.id,
+                doctor_name: selectedDoctor.name,
+                doctor_phone: selectedDoctor.phone_number,
+                patient_name: trimmedName,
+                patient_phone: trimmedPhone,
+                appointment_date: new Date(trimmedAppointmentDate).toISOString(),
+                message: `New booking from ${trimmedName} for ${selectedDoctor.name}`,
+              }),
+            })
+            setToast({
+              tone: 'success',
+              title: t('bookingToastTitle'),
+              message: t('whatsappQueued'),
+            })
+          } catch {
+            setToast({
+              tone: 'warning',
+              title: t('bookingToastTitle'),
+              message: t('whatsappFallback'),
+            })
+          }
+        } else {
+          setToast({
+            tone: 'warning',
+            title: t('bookingToastTitle'),
+            message: t('whatsappFallback'),
+          })
+        }
+      } else {
+        setToast({
+          tone: 'warning',
+          title: t('bookingToastTitle'),
+          message: t('whatsappMissing'),
+        })
+      }
+
+      await queryCache.invalidateQueries({ queryKey: ['appointments', doctorId] })
+
       setPatientName('')
       setPhoneNumber('')
+      setAppointmentDate(toDatetimeLocalValue(new Date()))
       setStatus('success')
       setFeedback(t('successMessage'))
     } catch (error) {
       const localAppointment = saveLocalAppointment(createLocalAppointment(doctorId, trimmedName, trimmedPhone))
+      queryCache.invalidateQueries({ queryKey: ['appointments', doctorId] })
       setPatientName('')
       setPhoneNumber('')
+      setAppointmentDate(toDatetimeLocalValue(new Date()))
       setStatus('success')
       setFeedback(
         ui.language === 'ar'
           ? `تم تأكيد الموعد وحفظه محليًا مؤقتًا بسبب مشكلة في Supabase. ${localAppointment.patient_name}`
           : `Appointment confirmed and saved locally because Supabase rejected the insert. ${localAppointment.patient_name}`,
       )
+      setToast({
+        tone: 'warning',
+        title: t('bookingToastTitle'),
+        message: t('whatsappFallback'),
+      })
     }
   }
 
@@ -1213,6 +1555,23 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
   return (
     <AppShell ui={ui}>
+      <div className="fixed right-4 top-4 z-50 w-[min(92vw,24rem)]">
+        {toast ? (
+          <div
+            className={`rounded-3xl border px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-xl transition-all duration-300 ${
+              toast.tone === 'success'
+                ? 'border-emerald-300/30 bg-emerald-50 text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-50'
+                : 'border-amber-300/40 bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-50'
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            <p className="text-xs uppercase tracking-[0.32em] opacity-70">{toast.title}</p>
+            <p className="mt-2 text-sm leading-6">{toast.message}</p>
+          </div>
+        ) : null}
+      </div>
+
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
           <p className="text-xs uppercase tracking-[0.45em] text-cyan-700/70 dark:text-cyan-200/70">{t('bookingPortal')}</p>
@@ -1305,6 +1664,21 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
                     disabled={isLoading}
                   />
                 </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('bookingAppointmentDate')}</span>
+                <div className="group rounded-2xl border border-cyan-300/15 bg-white px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70">
+                  <input
+                    className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                    value={appointmentDate}
+                    onChange={event => setAppointmentDate(event.target.value)}
+                    placeholder={t('bookingPlaceholderDate')}
+                    type="datetime-local"
+                    disabled={isLoading}
+                  />
+                </div>
+                <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">{t('bookingDateHint')}</span>
               </label>
 
               <button
@@ -1402,10 +1776,72 @@ function DashboardAccessPage({ ui }) {
   const [secretCode, setSecretCode] = useState('')
   const [submittedCode, setSubmittedCode] = useState('')
   const [actionNotice, setActionNotice] = useState('')
+  const [authNotice, setAuthNotice] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [session, setSession] = useState(null)
   const { doctor, loading: doctorLoading, notice: doctorNotice } = useDoctorByCode(submittedCode, ui.language)
   const { appointments, setAppointments, loading: appointmentsLoading, notice: appointmentsNotice } = useAppointmentsByDoctorId(doctor?.id, ui.language)
 
   const resolvedAppointments = appointments || []
+
+  useEffect(() => {
+    let active = true
+
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getSession()
+
+      if (active) {
+        setSession(data?.session || null)
+      }
+    }
+
+    loadSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) {
+        setSession(nextSession || null)
+      }
+    })
+
+    return () => {
+      active = false
+      subscription?.unsubscribe()
+    }
+  }, [])
+
+  const handleLogin = async event => {
+    event.preventDefault()
+
+    const email = loginEmail.trim()
+    if (!email) {
+      setAuthNotice(ui.language === 'ar' ? 'يرجى إدخال البريد الإلكتروني.' : 'Please enter an email address.')
+      return
+    }
+
+    try {
+      setLoginLoading(true)
+      setAuthNotice('')
+
+      const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      setAuthNotice(t('dashboardOtpSent'))
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : t('dashboardOtpError'))
+    } finally {
+      setLoginLoading(false)
+    }
+  }
 
   const handleSubmit = event => {
     event.preventDefault()
@@ -1455,8 +1891,42 @@ function DashboardAccessPage({ ui }) {
         <aside className="space-y-6 rounded-[2rem] border border-white/40 bg-white/70 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-800/60">
           <div className="rounded-[1.6rem] border border-white/40 bg-white/70 p-5 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05),0_4px_6px_-2px_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-white/5">
             <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardLogin')}</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">{t('dashboardAuthTitle')}</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('dashboardAuthIntro')}</p>
+
+            <form className="mt-5 space-y-3" onSubmit={handleLogin}>
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                value={loginEmail}
+                onChange={event => setLoginEmail(event.target.value)}
+                placeholder={t('dashboardEmailPlaceholder')}
+                autoComplete="email"
+                inputMode="email"
+              />
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_30px_rgba(34,211,238,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loginLoading ? t('finalizingBooking') : t('sendMagicLink')}
+              </button>
+            </form>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-500 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-300">
+              {session ? t('dashboardSessionActive') : ui.language === 'ar' ? 'لم يتم العثور على جلسة بعد. يمكن متابعة رمز الطبيب أثناء انتظار البريد الإلكتروني.' : 'No active session yet. You can continue with the doctor code while the magic link is delivered.'}
+            </div>
+
+            {authNotice ? (
+              <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">
+                {authNotice}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-[1.6rem] border border-white/40 bg-white/70 p-5 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05),0_4px_6px_-2px_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-white/5">
+            <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardCodeGateTitle')}</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">{t('privateDoctorCode')}</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('enterDashboardCode')}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('dashboardCodeGateIntro')}</p>
             <p className="mt-3 text-xs leading-6 text-slate-500 dark:text-slate-400">{t('dashboardCodeHelper')}</p>
 
             <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
@@ -1474,16 +1944,6 @@ function DashboardAccessPage({ ui }) {
                 {t('unlockDashboard')}
               </button>
             </form>
-
-            <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-slate-50 p-4 text-sm text-slate-700 dark:border-cyan-300/10 dark:bg-slate-950/60 dark:text-slate-300">
-              <p>{ui.language === 'ar' ? 'يمكنك أيضًا استخدام البريد الإلكتروني الآمن لتسجيل الدخول عبر رابط سحري أو OTP.' : 'You can also use secure email login via magic link or OTP.'}</p>
-              <Link
-                to="/auth"
-                className="mt-3 inline-flex items-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-400/20 dark:border-cyan-300/15 dark:bg-cyan-400/10 dark:text-cyan-100"
-              >
-                {t('otpLoginTitle')}
-              </Link>
-            </div>
 
             <div className="mt-5 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/60">
               <div className="flex items-center justify-between gap-3">
@@ -1561,68 +2021,20 @@ function DashboardAccessPage({ ui }) {
 function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointmentsLoading, appointmentsNotice, ui, onToggleStatus }) {
   const t = key => getText(ui.language, key)
   const isArabic = ui.language === 'ar'
-  const now = new Date()
-
-  const normalizedAppointments = appointments.map(appointment => {
-    const createdAt = new Date(appointment.created_at || appointment.time || '')
-    return {
-      ...appointment,
-      createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
-    }
-  })
+  const analytics = useMemo(() => buildAnalyticsSummary(appointments, doctor, ui.language), [appointments, doctor, ui.language])
 
   const totals = appointmentStatusOrder.reduce(
     (accumulator, status) => ({
       ...accumulator,
-      [status]: normalizedAppointments.filter(appointment => appointment.status === status).length,
+      [status]: appointments.filter(appointment => appointment.status === status).length,
     }),
     {},
   )
 
-  const thisMonthAppointments = normalizedAppointments.filter(appointment => {
-    return (
-      appointment.createdAt.getFullYear() === now.getFullYear() &&
-      appointment.createdAt.getMonth() === now.getMonth()
-    )
-  })
-
-  const todaysRemaining = normalizedAppointments.filter(appointment => {
-    return (
-      appointment.createdAt.getFullYear() === now.getFullYear() &&
-      appointment.createdAt.getMonth() === now.getMonth() &&
-      appointment.createdAt.getDate() === now.getDate() &&
-      appointment.status !== 'Completed'
-    )
-  }).length
-
-  const revenueEstimate = Math.round(thisMonthAppointments.filter(appointment => appointment.status === 'Completed').length * parsePriceValue(doctor?.price))
-
-  const weekDays = isArabic ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const weeklyCounts = weekDays.map((label, index) => ({ day: label, count: normalizedAppointments.filter(appointment => appointment.createdAt.getDay() === index).length }))
-
-  const monthlyTrendMap = normalizedAppointments.reduce((acc, appointment) => {
-    const monthKey = `${appointment.createdAt.getFullYear()}-${appointment.createdAt.getMonth()}`
-    const label = formatMonthLabel(appointment.createdAt.toISOString(), ui.language)
-    if (!acc[monthKey]) {
-      acc[monthKey] = { month: label, count: 0, date: appointment.createdAt }
-    }
-    acc[monthKey].count += 1
-    return acc
-  }, {})
-
-  const monthlyTrend = Object.values(monthlyTrendMap)
-    .sort((left, right) => left.date.getTime() - right.date.getTime())
-
-  const reportAppointments = normalizedAppointments.map(appointment => ({
-    ...appointment,
-    createdAtLabel: appointment.createdAt.toLocaleString(ui.language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-  }))
+  const handleExport = () => {
+    const rows = buildAppointmentCsvRows(appointments, doctor, ui.language)
+    downloadCsv(`hihya-care-${doctor?.id || 'dashboard'}-appointments.csv`, rows)
+  }
 
   return (
     <div className="rounded-[2rem] border border-white/40 bg-white/70 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 sm:p-6">
@@ -1639,6 +2051,9 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-auto">
+            <MetricCard label={t('todayPatients')} value={String(analytics.todayPatients)} tone="text-cyan-700 dark:text-cyan-100" />
+            <MetricCard label={t('monthPatients')} value={String(analytics.currentMonthPatients)} tone="text-emerald-700 dark:text-emerald-100" />
+            <MetricCard label={t('revenueEstimate')} value={`$${analytics.revenueEstimate.toLocaleString()}`} tone="text-sky-700 dark:text-sky-100" />
             <MetricCard label={t('dashboardTotalWaiting')} value={String(totals.Pending || 0)} tone="text-emerald-700 dark:text-emerald-100" />
             <MetricCard label={t('dashboardState')} value={String(totals['In Clinic'] || 0)} tone="text-cyan-700 dark:text-cyan-100" />
             <MetricCard label={t('completedStatus')} value={String(totals.Completed || 0)} tone="text-sky-700 dark:text-sky-100" />
@@ -1661,81 +2076,6 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
           </div>
         ) : null}
 
-        {doctor && (
-          <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
-            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/60">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <MetricCard label={t('dashboardTotalWaiting')} value={String(totals.Pending || 0)} tone="text-emerald-700 dark:text-emerald-100" />
-                <MetricCard label={t('dashboardState')} value={String(totals['In Clinic'] || 0)} tone="text-cyan-700 dark:text-cyan-100" />
-                <MetricCard label={t('completedStatus')} value={String(totals.Completed || 0)} tone="text-sky-700 dark:text-sky-100" />
-              </div>
-              <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                <MetricCard label={ui.language === 'ar' ? 'مواعيد الشهر' : 'This Month'} value={String(thisMonthAppointments.length)} tone="text-slate-700 dark:text-slate-100" />
-                <MetricCard label={ui.language === 'ar' ? 'المتبقي اليوم' : 'Today Remaining'} value={String(todaysRemaining)} tone="text-amber-700 dark:text-amber-200" />
-                <MetricCard label={ui.language === 'ar' ? 'تقدير الإيرادات' : 'Revenue Estimate'} value={`$${revenueEstimate}`} tone="text-emerald-700 dark:text-emerald-100" />
-              </div>
-              <div className="mt-6 space-y-4">
-                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{ui.language === 'ar' ? 'نمط النمو الشهري' : 'Monthly Growth'}</h3>
-                    <button
-                      type="button"
-                      onClick={() => downloadCsv(reportAppointments, doctor)}
-                      className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-400/20 dark:border-cyan-300/15 dark:bg-cyan-400/10 dark:text-cyan-100"
-                    >
-                      {ui.language === 'ar' ? 'تصدير تقرير CSV' : 'Export CSV'}
-                    </button>
-                  </div>
-                  <div className="mt-4 h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={monthlyTrend} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={ui.theme === 'dark' ? '#1f2937' : '#e2e8f0'} />
-                        <XAxis dataKey="month" tick={{ fill: ui.theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }} />
-                        <YAxis tick={{ fill: ui.theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }} />
-                        <Tooltip
-                          cursor={{ fill: ui.theme === 'dark' ? 'rgba(15,23,42,0.4)' : 'rgba(148,163,184,0.12)' }}
-                          contentStyle={{ background: ui.theme === 'dark' ? '#0f172a' : '#fff', borderRadius: 14, border: 'none', boxShadow: '0 12px 35px rgba(15, 23, 42, 0.18)' }}
-                        />
-                        <Line type="monotone" dataKey="count" stroke="#22d3ee" strokeWidth={3} dot={{ r: 4 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{ui.language === 'ar' ? 'أيام ذروة الحجز' : 'Peak Booking Days'}</h3>
-                  <div className="mt-4 h-52">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={weeklyCounts} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={ui.theme === 'dark' ? '#1f2937' : '#e2e8f0'} />
-                        <XAxis dataKey="day" tick={{ fill: ui.theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }} />
-                        <YAxis tick={{ fill: ui.theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }} />
-                        <Tooltip
-                          cursor={{ fill: ui.theme === 'dark' ? 'rgba(15,23,42,0.4)' : 'rgba(148,163,184,0.12)' }}
-                          contentStyle={{ background: ui.theme === 'dark' ? '#0f172a' : '#fff', borderRadius: 14, border: 'none', boxShadow: '0 12px 35px rgba(15, 23, 42, 0.18)' }}
-                        />
-                        <Bar dataKey="count" fill="#22d3ee" radius={[10, 10, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-950/60">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{ui.language === 'ar' ? 'تقرير المواعيد' : 'Appointment Report'}</h3>
-              <div className="mt-4 space-y-2">
-                {reportAppointments.slice(0, 5).map(appointment => (
-                  <div key={appointment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-900/60">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{appointment.patient_name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{appointment.createdAtLabel}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{ui.language === 'ar' ? appointment.status : appointment.status}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {appointmentsLoading ? (
           <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
             {t('loadingAppointmentsData')}
@@ -1745,6 +2085,110 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
             {appointmentsNotice}
           </div>
         ) : null}
+
+        <div className="mt-8 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 dark:border-white/10 dark:bg-white/5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-cyan-700/70 dark:text-cyan-200/70">{t('analyticsTitle')}</p>
+                <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{t('statusBreakdown')}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('analyticsIntro')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-400/20 dark:text-cyan-100"
+              >
+                {t('exportReport')}
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('statusBreakdown')}</p>
+                <div className="mt-3 h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={analytics.statusBreakdown}
+                        dataKey="value"
+                        nameKey="label"
+                        innerRadius={64}
+                        outerRadius={94}
+                        paddingAngle={3}
+                      >
+                        {analytics.statusBreakdown.map((entry, index) => (
+                          <Cell
+                            key={entry.label}
+                            fill={['#06b6d4', '#10b981', '#0ea5e9'][index % 3]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('peakDay')}</p>
+                <div className="mt-3 h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analytics.weekdayCounts}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#06b6d4" radius={[12, 12, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 dark:border-white/10 dark:bg-white/5">
+            <p className="text-xs uppercase tracking-[0.35em] text-cyan-700/70 dark:text-cyan-200/70">{t('monthlyReport')}</p>
+            <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{t('monthlyTrends')}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('currentMonth')}</p>
+
+            <div className="mt-5 h-56 rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.monthSeries}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="appointments" stroke="#10b981" strokeWidth={3} dot={false} />
+                  <Line type="monotone" dataKey="completed" stroke="#06b6d4" strokeWidth={3} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/60">
+              <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
+                <thead className="bg-slate-50 text-left text-slate-500 dark:bg-white/5 dark:text-slate-300">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">{t('currentMonth')}</th>
+                    <th className="px-4 py-3 font-medium">{t('appointmentsTitle')}</th>
+                    <th className="px-4 py-3 font-medium">{t('completedStatus')}</th>
+                    <th className="px-4 py-3 font-medium">{t('revenueEstimate')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-white/10">
+                  {analytics.monthSeries.map(row => (
+                    <tr key={row.key} className="text-slate-700 dark:text-slate-200">
+                      <td className="px-4 py-3">{row.label}</td>
+                      <td className="px-4 py-3">{row.appointments}</td>
+                      <td className="px-4 py-3">{row.completed}</td>
+                      <td className="px-4 py-3">${row.revenue.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
         <div className="mt-8 space-y-4">
           {appointments.length ? (
@@ -1766,7 +2210,7 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{appointment.phone}</p>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{appointment.time || '—'}</p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatAppointmentDate(appointment, ui.language)}</p>
                     </div>
 
                     <button
@@ -1800,62 +2244,6 @@ function statusBadgeClass(status) {
     default:
       return 'border-slate-300/50 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300'
   }
-}
-
-function parsePriceValue(price) {
-  if (typeof price !== 'string') {
-    return 0
-  }
-  const cleaned = price.replace(/[^0-9.]/g, '')
-  const numeric = parseFloat(cleaned)
-  return Number.isFinite(numeric) ? numeric : 0
-}
-
-function formatMonthLabel(dateString, language) {
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) {
-    return language === 'ar' ? 'غير معروف' : 'Unknown'
-  }
-  return date.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function buildCsvRows(appointments, doctor) {
-  const rows = appointments.map(appointment => ({
-    'Patient Name': appointment.patient_name,
-    Phone: appointment.phone,
-    Status: appointment.status,
-    Time: appointment.time,
-    'Created At': appointment.created_at || appointment.time || '',
-    'Doctor Name': doctor?.name || '',
-  }))
-
-  const header = Object.keys(rows[0] || {
-    'Patient Name': '',
-    Phone: '',
-    Status: '',
-    Time: '',
-    'Created At': '',
-    'Doctor Name': '',
-  })
-
-  const lines = [header.join(','), ...rows.map(row => header.map(key => `"${String(row[key] ?? '').replace(/"/g, '""')}"`).join(','))]
-  return lines.join('\n')
-}
-
-function downloadCsv(appointments, doctor) {
-  const csv = buildCsvRows(appointments, doctor)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = `hihya-care-report-${doctor?.id || 'appointments'}.csv`
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
 }
 
 function MetricCard({ label, value, tone }) {

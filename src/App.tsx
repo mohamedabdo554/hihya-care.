@@ -10,6 +10,7 @@ import {
 } from 'react-router-dom'
 import { supabase } from './supabaseClient.js'
 import DoctorCard, { type Doctor } from './DoctorCard'
+import PremiumDoctorProfile from './components/PremiumDoctorProfile'
 
 type BookingStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -123,6 +124,10 @@ function App() {
         <Route
           path="/"
           element={<HomePage doctors={doctors} loading={doctorsLoading} notice={doctorsNotice} />}
+        />
+        <Route
+          path="/doctor/premium-preview"
+          element={<PremiumDoctorProfile />}
         />
         <Route
           path="/doctor/:doctorId"
