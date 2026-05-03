@@ -46,12 +46,11 @@ const translations = {
     rtlBanner: 'The interface is now in Arabic with right-to-left direction.',
     homeKicker: 'Doctor Directory',
     homeTitle: 'Select the right doctor from the Hihya Care network.',
-    homeDescription:
-      'A cinematic booking surface for a modern clinic. Choose a doctor, review the profile, then open the booking panel.',
+    homeDescription: '',
     loadingDoctors: 'Loading doctors...',
     loadingProfile: 'Loading doctor profile...',
     loadingAppointments: 'Loading appointments...',
-    fallbackNotice: 'Supabase data is unavailable right now. Showing demo content until the tables are ready.',
+    fallbackNotice: '',
     profileTitle: 'Doctor Profile',
     acceptingAppointments: 'Accepting Appointments',
     experience: 'Experience',
@@ -172,12 +171,11 @@ const translations = {
     rtlBanner: 'تم ضبط الواجهة إلى العربية مع اتجاه من اليمين إلى اليسار.',
     homeKicker: 'دليل الأطباء',
     homeTitle: 'اختر الطبيب المناسب من شبكة Hihya Care.',
-    homeDescription:
-      'واجهة حجز سينمائية لعيادة حديثة. اختر الطبيب، راجع الملف، ثم افتح لوحة الحجز.',
+    homeDescription: '',
     loadingDoctors: 'جارٍ تحميل الأطباء...',
     loadingProfile: 'جارٍ تحميل ملف الطبيب...',
     loadingAppointments: 'جارٍ تحميل المواعيد...',
-    fallbackNotice: 'بيانات Supabase غير متاحة حالياً. يتم عرض محتوى تجريبي حتى تصبح الجداول جاهزة.',
+    fallbackNotice: '',
     profileTitle: 'ملف الطبيب',
     acceptingAppointments: 'يقبل الحجوزات',
     experience: 'الخبرة',
@@ -929,37 +927,31 @@ function AppShell({ children, ui }) {
 
   return (
     <main className={`relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 ${themePulse ? 'theme-fade' : ''}`}>
-      {/* DEBUG BANNER: visible to confirm the React app is rendering in the browser */}
-      <div id="debug-banner" className="fixed left-4 top-4 z-[9999] bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">Debug: AppShell rendered — lang: {language} theme: {theme}</div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.08),_transparent_32%)] dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.22),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.16),_transparent_32%),linear-gradient(180deg,_rgba(2,6,23,0.96),_rgba(2,6,23,1))]" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:64px_64px] opacity-20 [mask-image:radial-gradient(circle_at_center,black,transparent_82%)] dark:bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)]" />
       <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-400/20" />
       <div className="absolute right-10 top-24 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-500/10" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="sticky top-3 z-30 mb-4 rounded-[1.4rem] border border-slate-200/80 bg-white/88 px-4 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-slate-950/72 dark:shadow-[0_0_40px_rgba(34,211,238,0.08)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <Link to="/" className="flex items-center gap-3 text-slate-900 dark:text-cyan-100">
+        <header className="sticky top-2 z-30 mb-3 rounded-2xl border border-slate-200/80 bg-white/92 px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-slate-950/72 dark:shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:top-3 sm:mb-4 sm:px-4 sm:py-2.5 sm:rounded-3xl">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <Link to="/" className="flex items-center gap-2 text-slate-900 dark:text-cyan-100">
               <HihyaEmblem theme={theme} />
-              <span className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.42em]">{t('navBrand')}</span>
-                <span className="text-[11px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+              <span className="hidden flex-col text-start sm:flex">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.34em]">{t('navBrand')}</span>
+                <span className="hidden text-[11px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 sm:block">
                   {isArabic ? 'هوية طبية مستقبلية' : 'Futuristic medical identity'}
                 </span>
               </span>
             </Link>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] uppercase tracking-[0.3em] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                {t('navSubtitle')}
-              </div>
-
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-slate-950/60">
-                <span className="px-2 text-[11px] uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">{t('language')}</span>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:flex">
+                <span className="px-1.5 text-[9px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('language')}</span>
                 <button
                   type="button"
                   onClick={() => setLanguage('en')}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
                     language === 'en'
                       ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
                       : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
@@ -970,7 +962,7 @@ function AppShell({ children, ui }) {
                 <button
                   type="button"
                   onClick={() => setLanguage('ar')}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
                     language === 'ar'
                       ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
                       : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
@@ -980,12 +972,12 @@ function AppShell({ children, ui }) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-slate-950/60">
-                <span className="px-2 text-[11px] uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
+              <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
+                <span className="px-1.5 text-[9px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
                 <button
                   type="button"
                   onClick={() => setTheme('light')}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
                     theme === 'light'
                       ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
                       : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
@@ -996,7 +988,7 @@ function AppShell({ children, ui }) {
                 <button
                   type="button"
                   onClick={() => setTheme('dark')}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
                     theme === 'dark'
                       ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
                       : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
@@ -1007,70 +999,63 @@ function AppShell({ children, ui }) {
               </div>
             </div>
           </div>
-
-          <div
-            className={`mt-4 rounded-2xl border px-4 py-3 text-sm transition-colors duration-300 ${
-              isArabic ? 'text-right' : 'text-left'
-            } bg-slate-50 text-slate-700 border-slate-200 dark:bg-white/5 dark:text-slate-300 dark:border-white/10`}
-          >
-            {isArabic ? t('rtlBanner') : 'The interface is currently in English with a light default layout for medical clarity.'}
-          </div>
         </header>
 
         <div dir={isArabic ? 'rtl' : 'ltr'}>
           {children}
 
-          <footer className="mt-8 rounded-[1.75rem] border border-slate-200 bg-white/92 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">
+          <footer className="mt-6 rounded-2xl border border-slate-200 bg-white/92 p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 sm:mt-8 sm:rounded-3xl sm:p-4">
+            <div className="grid gap-3 lg:gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-end lg:justify-between">
+              <div className="max-w-2xl text-center lg:text-start">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-700/70 dark:text-cyan-200/70 sm:text-xs sm:tracking-[0.4em]">
                   {isArabic ? 'دعم العيادة' : 'Clinic support'}
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">
+                <h3 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-900 dark:text-white sm:mt-1.5 sm:text-xl">
                   {isArabic ? 'للاستفسار أو الحجز أو المتابعة' : 'For booking, questions, or follow-up'}
                 </h3>
-                <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  <p>{isArabic ? 'فريق الدعم جاهز لمساعدتك في أي استفسار عن التجربة أو الحجز.' : 'The support team is ready to help with any booking or demo question.'}</p>
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
+                <div className="mt-1.5 space-y-1.5 text-xs leading-4 text-slate-600 dark:text-slate-300 sm:mt-2 sm:space-y-2 sm:text-sm sm:leading-6">
+                  <p className="sm:hidden">{isArabic ? 'الدعم جاهز لأي سؤال أو حجز.' : 'Support is ready for any question or booking.'}</p>
+                  <p className="hidden sm:block">{isArabic ? 'فريق الدعم جاهز لمساعدتك في أي استفسار عن التجربة أو الحجز.' : 'The support team is ready to help with any booking or demo question.'}</p>
+                  <p className="hidden text-xs uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400 sm:block">
                     {isArabic ? 'بيانات التواصل المباشر' : 'Direct contact details'}
                   </p>
-                  <p><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الاسم' : 'Name'}:</span> Mohammed Abdelkarim</p>
-                  <p><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الرقم' : 'Phone'}:</span> 01013988098</p>
-                  <p><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الإيميل' : 'Email'}:</span> mohammed.abdelkarim2025@gmail.com</p>
+                  <p className="hidden sm:block"><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الاسم' : 'Name'}:</span> Mohammed Abdelkarim</p>
+                  <p className="hidden sm:block"><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الرقم' : 'Phone'}:</span> 01013988098</p>
+                  <p className="hidden sm:block"><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الإيميل' : 'Email'}:</span> mohammed.abdelkarim2025@gmail.com</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:self-end">
                 <a
                   href="https://wa.me/201013988098"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-400/15 dark:text-emerald-100"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-400/15 dark:text-emerald-100 sm:rounded-2xl sm:px-3.5 sm:py-2.5 sm:text-sm"
                 >
-                  <MessageCircleMore size={16} />
-                  <span className="flex flex-col text-start leading-tight">
+                  <MessageCircleMore size={15} />
+                  <span className="flex flex-col text-center leading-4 sm:text-start sm:leading-tight">
                     <span>{isArabic ? 'واتساب' : 'WhatsApp'}</span>
-                    <span className="text-xs font-normal opacity-80">01013988098</span>
+                    <span className="text-[10px] font-normal opacity-75">01013988098</span>
                   </span>
                 </a>
                 <a
                   href="mailto:mohammed.abdelkarim2025@gmail.com"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-400/15 dark:text-cyan-100"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-400/15 dark:text-cyan-100 sm:rounded-2xl sm:px-3.5 sm:py-2.5 sm:text-sm"
                 >
-                  <Mail size={16} />
-                  <span className="flex flex-col text-start leading-tight">
+                  <Mail size={15} />
+                  <span className="flex flex-col text-center leading-4 sm:text-start sm:leading-tight">
                     <span>{isArabic ? 'إيميل' : 'Email'};</span>
-                    <span className="text-xs font-normal opacity-80">mohammed.abdelkarim2025@gmail.com</span>
+                    <span className="text-[10px] font-normal opacity-75">mohammed.abdelkarim2025@gmail.com</span>
                   </span>
                 </a>
                 <a
                   href="tel:+201013988098"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-300/50 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300/50 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10 sm:rounded-2xl sm:px-3.5 sm:py-2.5 sm:text-sm"
                 >
-                  <Phone size={16} />
-                  <span className="flex flex-col text-start leading-tight">
+                  <Phone size={15} />
+                  <span className="flex flex-col text-center leading-4 sm:text-start sm:leading-tight">
                     <span>{isArabic ? 'اتصال' : 'Call'}</span>
-                    <span className="text-xs font-normal opacity-80">+20 101 398 8098</span>
+                    <span className="text-[10px] font-normal opacity-75">+20 101 398 8098</span>
                   </span>
                 </a>
               </div>
@@ -1088,8 +1073,8 @@ function DoctorCard({ doctor, index, ui }) {
   const localizedDoctor = localizeDoctor(ui.language, doctor)
 
   return (
-    <article className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-[0_0_120px_rgba(34,211,238,0.16)] dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-[0_0_80px_rgba(34,211,238,0.08)]">
-      <div className={`flex aspect-square h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-gradient-to-br ${avatarGradient} shadow-inner dark:border-white/10`}>
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-[0_0_120px_rgba(34,211,238,0.16)] dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-[0_0_80px_rgba(34,211,238,0.08)] sm:p-5">
+      <div className={`mx-auto flex aspect-square h-24 w-24 items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-gradient-to-br ${avatarGradient} shadow-inner dark:border-white/10 sm:mx-0 sm:h-20 sm:w-20`}>
         {localizedDoctor.image_url ? (
           <img src={localizedDoctor.image_url} alt={localizedDoctor.name} className="h-full w-full object-cover" />
         ) : (
@@ -1109,27 +1094,14 @@ function DoctorCard({ doctor, index, ui }) {
         )}
       </div>
 
-      <div className="absolute right-4 top-4 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-700 dark:text-cyan-100">
+      <div className={`absolute top-4 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-700 dark:text-cyan-100 ${ui.language === 'ar' ? 'left-4' : 'right-4'}`}>
         {ui.language === 'ar' ? 'مميز للحجز' : 'Featured for booking'}
       </div>
 
-      <div className="mt-5">
+      <div className="mt-5 text-center sm:text-start">
         <p className="text-xs uppercase tracking-[0.38em] text-cyan-700/70 dark:text-cyan-200/70">{t('doctorCardTitle')}</p>
-        <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900 dark:text-white">{localizedDoctor.name}</h3>
+        <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-slate-900 dark:text-white sm:text-xl">{localizedDoctor.name}</h3>
         <p className="mt-1 text-sm text-cyan-700/80 dark:text-cyan-100/80">{localizedDoctor.specialty}</p>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/55 dark:text-slate-300">
-        <p>{localizedDoctor.bio || t('doctorFallbackBio')}</p>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em] text-slate-300">
-        <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-emerald-700 dark:text-emerald-100">
-          {localizedDoctor.price}
-        </span>
-        <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-cyan-700 dark:text-cyan-100">
-          {localizedDoctor.phone_number ? t('doctorWhatsAppReady') : t('doctorNoPhone')}
-        </span>
       </div>
 
       <Link
@@ -1336,10 +1308,15 @@ function DoctorProfilePage({ loading, notice, ui }) {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <InfoPanel label={t('experience')} value={doctor.experience || doctor.bio || getText(ui.language, 'doctorFallbackBio')} />
-            <InfoPanel label={t('clinicLocation')} value={doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيهيا كير' : 'Hihya Care main wing')} />
-            <InfoPanel label={t('price')} value={doctor.price} />
+          <div className="mt-8 space-y-4">
+            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-50 p-4 dark:border-emerald-300/10 dark:bg-emerald-400/5">
+              <p className="text-[11px] uppercase tracking-[0.32em] text-emerald-700/70 dark:text-emerald-200/70">{t('experience')}</p>
+              <p className="mt-2 text-base leading-6 font-semibold text-emerald-900 dark:text-emerald-50">{doctor.experience || doctor.bio || getText(ui.language, 'doctorFallbackBio')}</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InfoPanel label={t('clinicLocation')} value={doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيهيا كير' : 'Hihya Care main wing')} />
+              <InfoPanel label={t('price')} value={doctor.price} />
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
