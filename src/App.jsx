@@ -350,18 +350,46 @@ const fallbackDoctors = [
 ]
 
 const fallbackAppointmentsByDoctor = {
+  'dr-mohamed-alafandi': [
+    { patient_name: 'أية محمود', phone: '+201055501234', doctor_id: 'dr-mohamed-alafandi', status: 'Pending', appointment_date: '2026-05-03T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'مينا عادل', phone: '+201066602345', doctor_id: 'dr-mohamed-alafandi', status: 'In Clinic', appointment_date: '2026-05-03T09:30:00.000Z', time: '09:30' },
+    { patient_name: 'سارة فؤاد', phone: '+201022203456', doctor_id: 'dr-mohamed-alafandi', status: 'Completed', appointment_date: '2026-05-03T10:15:00.000Z', time: '10:15' },
+    { patient_name: 'ياسر حسن', phone: '+201033304567', doctor_id: 'dr-mohamed-alafandi', status: 'In Clinic', appointment_date: '2026-05-03T11:00:00.000Z', time: '11:00' },
+    { patient_name: 'ديانا شريف', phone: '+201044405678', doctor_id: 'dr-mohamed-alafandi', status: 'Completed', appointment_date: '2026-05-03T11:45:00.000Z', time: '11:45' },
+    { patient_name: 'محمد سامح', phone: '+201011106789', doctor_id: 'dr-mohamed-alafandi', status: 'Pending', appointment_date: '2026-05-03T14:00:00.000Z', time: '14:00' },
+    { patient_name: 'نور خالد', phone: '+201055523456', doctor_id: 'dr-mohamed-alafandi', status: 'Completed', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'يوسف عمر', phone: '+201055534567', doctor_id: 'dr-mohamed-alafandi', status: 'Completed', appointment_date: '2026-05-02T10:00:00.000Z', time: '10:00' },
+    { patient_name: 'ليلى إبراهيم', phone: '+201066645678', doctor_id: 'dr-mohamed-alafandi', status: 'Completed', appointment_date: '2026-05-02T14:00:00.000Z', time: '14:00' },
+  ],
   'dr-elya-nassar': [
-    { patient_name: 'Aya Mahmoud', phone: '+201055501234', doctor_id: 'dr-elya-nassar', status: 'Pending', time: '09:10' },
-    { patient_name: 'Mina Adel', phone: '+201066602345', doctor_id: 'dr-elya-nassar', status: 'In Clinic', time: '09:35' },
+    { patient_name: 'Aya Mahmoud', phone: '+201055501234', doctor_id: 'dr-elya-nassar', status: 'Pending', appointment_date: '2026-05-03T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Mina Adel', phone: '+201066602345', doctor_id: 'dr-elya-nassar', status: 'In Clinic', appointment_date: '2026-05-03T09:30:00.000Z', time: '09:30' },
+    { patient_name: 'Sara Fouad', phone: '+201022203456', doctor_id: 'dr-elya-nassar', status: 'Completed', appointment_date: '2026-05-03T10:15:00.000Z', time: '10:15' },
+    { patient_name: 'Yasser Hassan', phone: '+201033304567', doctor_id: 'dr-elya-nassar', status: 'In Clinic', appointment_date: '2026-05-03T11:00:00.000Z', time: '11:00' },
+    { patient_name: 'Dina Sherif', phone: '+201044405678', doctor_id: 'dr-elya-nassar', status: 'Completed', appointment_date: '2026-05-03T11:45:00.000Z', time: '11:45' },
+    { patient_name: 'Mohamed Sameh', phone: '+201011106789', doctor_id: 'dr-elya-nassar', status: 'Pending', appointment_date: '2026-05-03T14:00:00.000Z', time: '14:00' },
+    { patient_name: 'Noor Khaled', phone: '+201055523456', doctor_id: 'dr-elya-nassar', status: 'Completed', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Youssef Omar', phone: '+201055534567', doctor_id: 'dr-elya-nassar', status: 'Completed', appointment_date: '2026-05-02T10:00:00.000Z', time: '10:00' },
   ],
   'dr-adam-fahmy': [
-    { patient_name: 'Tamer Hossam', phone: '+201055512345', doctor_id: 'dr-adam-fahmy', status: 'Pending', time: '10:00' },
+    { patient_name: 'Tamer Hossam', phone: '+201055512345', doctor_id: 'dr-adam-fahmy', status: 'Pending', appointment_date: '2026-05-03T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Ahmed Mahmoud', phone: '+201066634567', doctor_id: 'dr-adam-fahmy', status: 'In Clinic', appointment_date: '2026-05-03T10:00:00.000Z', time: '10:00' },
+    { patient_name: 'Fatima Ali', phone: '+201022234567', doctor_id: 'dr-adam-fahmy', status: 'Completed', appointment_date: '2026-05-03T11:00:00.000Z', time: '11:00' },
+    { patient_name: 'Khadija Hassan', phone: '+201033345678', doctor_id: 'dr-adam-fahmy', status: 'Completed', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Salma Gamal', phone: '+201044456789', doctor_id: 'dr-adam-fahmy', status: 'Completed', appointment_date: '2026-05-01T10:00:00.000Z', time: '10:00' },
   ],
   'dr-sara-adel': [
-    { patient_name: 'Noor Khaled', phone: '+201055523456', doctor_id: 'dr-sara-adel', status: 'Completed', time: '10:40' },
+    { patient_name: 'Noor Khaled', phone: '+201055523456', doctor_id: 'dr-sara-adel', status: 'Pending', appointment_date: '2026-05-03T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Youssef Omar', phone: '+201055534567', doctor_id: 'dr-sara-adel', status: 'In Clinic', appointment_date: '2026-05-03T10:00:00.000Z', time: '10:00' },
+    { patient_name: 'Layla Ibrahim', phone: '+201066645678', doctor_id: 'dr-sara-adel', status: 'Completed', appointment_date: '2026-05-03T11:00:00.000Z', time: '11:00' },
+    { patient_name: 'Omar Farouk', phone: '+201011167890', doctor_id: 'dr-sara-adel', status: 'Completed', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
   ],
   'dr-omar-ibrahim': [
-    { patient_name: 'Youssef Omar', phone: '+201055534567', doctor_id: 'dr-omar-ibrahim', status: 'Pending', time: '11:15' },
+    { patient_name: 'Youssef Omar', phone: '+201055534567', doctor_id: 'dr-omar-ibrahim', status: 'Pending', appointment_date: '2026-05-03T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Nermin Saeed', phone: '+201055545678', doctor_id: 'dr-omar-ibrahim', status: 'In Clinic', appointment_date: '2026-05-03T10:00:00.000Z', time: '10:00' },
+    { patient_name: 'Mohammad Alaa', phone: '+201066756789', doctor_id: 'dr-omar-ibrahim', status: 'Completed', appointment_date: '2026-05-03T11:00:00.000Z', time: '11:00' },
+    { patient_name: 'Hassan Ibrahim', phone: '+201033356789', doctor_id: 'dr-omar-ibrahim', status: 'Completed', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
+    { patient_name: 'Zainab Karim', phone: '+201044467890', doctor_id: 'dr-omar-ibrahim', status: 'Completed', appointment_date: '2026-04-28T10:00:00.000Z', time: '10:00' },
   ],
 }
 
@@ -593,23 +621,62 @@ function createFallbackAppointments(doctorId, language) {
     }))
   }
 
-  return language === 'ar'
+  // محاكاة بيانات غنية للشهر الحالي والشهر الماضي
+  const mockAppointments = language === 'ar'
     ? [
-        { id: `${doctorId}-1`, patient_name: "\u0623\u064a\u0629 \u0645\u062d\u0645\u0648\u062f", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
-        { id: `${doctorId}-2`, patient_name: "\u0645\u064a\u0646\u0627 \u0639\u0627\u062f\u0644", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-02T09:20:00.000Z", time: "09:20" },
-        { id: `${doctorId}-3`, patient_name: "\u0633\u0627\u0631\u0629 \u0641\u0624\u0627\u062f", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:10:00.000Z", time: "10:10" },
-        { id: `${doctorId}-4`, patient_name: "\u064a\u0627\u0633\u0631 \u062d\u0633\u0646", phone: "+201033304567", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T16:40:00.000Z", time: "16:40" },
-        { id: `${doctorId}-5`, patient_name: "\u062f\u064a\u0646\u0627 \u0634\u0631\u064a\u0641", phone: "+201044405678", doctor_id: doctorId, status: "Cancelled", appointment_date: "2026-05-02T17:15:00.000Z", time: "17:15" },
-        { id: `${doctorId}-6`, patient_name: "\u0645\u062d\u0645\u062f \u0633\u0627\u0645\u062d", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T18:00:00.000Z", time: "18:00" },
+        // مواعيد اليوم (مايو 3)
+        { id: `${doctorId}-1`, patient_name: "أية محمود", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-2`, patient_name: "مينا عادل", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T09:30:00.000Z", time: "09:30" },
+        { id: `${doctorId}-3`, patient_name: "سارة فؤاد", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T10:15:00.000Z", time: "10:15" },
+        { id: `${doctorId}-4`, patient_name: "ياسر حسن", phone: "+201033304567", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-5`, patient_name: "ديانا شريف", phone: "+201044405678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T11:45:00.000Z", time: "11:45" },
+        { id: `${doctorId}-6`, patient_name: "محمد سامح", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T14:00:00.000Z", time: "14:00" },
+        // مواعيد أمس (مايو 2)
+        { id: `${doctorId}-7`, patient_name: "نور خالد", phone: "+201055523456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-8`, patient_name: "يوسف عمر", phone: "+201055534567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:00:00.000Z", time: "10:00" },
+        { id: `${doctorId}-9`, patient_name: "ليلى إبراهيم", phone: "+201066645678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T14:00:00.000Z", time: "14:00" },
+        // مواعيد هذا الأسبوع
+        { id: `${doctorId}-10`, patient_name: "تامر حسام", phone: "+201055512345", doctor_id: doctorId, status: "Pending", appointment_date: "2026-04-29T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-11`, patient_name: "أحمد محمود", phone: "+201066634567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-29T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-12`, patient_name: "فاطمة علي", phone: "+201022234567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-30T10:00:00.000Z", time: "10:00" },
+        // مواعيد من أبريل
+        { id: `${doctorId}-13`, patient_name: "خديجة حسن", phone: "+201033345678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-22T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-14`, patient_name: "سلمى جمال", phone: "+201044456789", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-23T14:00:00.000Z", time: "14:00" },
+        { id: `${doctorId}-15`, patient_name: "عمر فاروق", phone: "+201011167890", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-24T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-16`, patient_name: "نرمين سعيد", phone: "+201055545678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-20T10:00:00.000Z", time: "10:00" },
+        { id: `${doctorId}-17`, patient_name: "محمد علاء", phone: "+201066756789", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-15T09:00:00.000Z", time: "09:00" },
       ]
     : [
-        { id: `${doctorId}-1`, patient_name: "Aya Mahmoud", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
-        { id: `${doctorId}-2`, patient_name: "Mina Adel", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-02T09:20:00.000Z", time: "09:20" },
-        { id: `${doctorId}-3`, patient_name: "Sara Fouad", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:10:00.000Z", time: "10:10" },
-        { id: `${doctorId}-4`, patient_name: "Yasser Hassan", phone: "+201033304567", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T16:40:00.000Z", time: "16:40" },
-        { id: `${doctorId}-5`, patient_name: "Dina Sherif", phone: "+201044405678", doctor_id: doctorId, status: "Cancelled", appointment_date: "2026-05-02T17:15:00.000Z", time: "17:15" },
-        { id: `${doctorId}-6`, patient_name: "Mohamed Sameh", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T18:00:00.000Z", time: "18:00" },
+        // Today's appointments (May 3)
+        { id: `${doctorId}-1`, patient_name: "Aya Mahmoud", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-2`, patient_name: "Mina Adel", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T09:30:00.000Z", time: "09:30" },
+        { id: `${doctorId}-3`, patient_name: "Sara Fouad", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T10:15:00.000Z", time: "10:15" },
+        { id: `${doctorId}-4`, patient_name: "Yasser Hassan", phone: "+201033304567", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-5`, patient_name: "Dina Sherif", phone: "+201044405678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T11:45:00.000Z", time: "11:45" },
+        { id: `${doctorId}-6`, patient_name: "Mohamed Sameh", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T14:00:00.000Z", time: "14:00" },
+        // Yesterday's appointments (May 2)
+        { id: `${doctorId}-7`, patient_name: "Noor Khaled", phone: "+201055523456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-8`, patient_name: "Youssef Omar", phone: "+201055534567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:00:00.000Z", time: "10:00" },
+        { id: `${doctorId}-9`, patient_name: "Layla Ibrahim", phone: "+201066645678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T14:00:00.000Z", time: "14:00" },
+        // This week's appointments
+        { id: `${doctorId}-10`, patient_name: "Tamer Hossam", phone: "+201055512345", doctor_id: doctorId, status: "Pending", appointment_date: "2026-04-29T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-11`, patient_name: "Ahmed Mahmoud", phone: "+201066634567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-29T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-12`, patient_name: "Fatima Ali", phone: "+201022234567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-30T10:00:00.000Z", time: "10:00" },
+        // April appointments
+        { id: `${doctorId}-13`, patient_name: "Khadija Hassan", phone: "+201033345678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-22T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-14`, patient_name: "Salma Gamal", phone: "+201044456789", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-23T14:00:00.000Z", time: "14:00" },
+        { id: `${doctorId}-15`, patient_name: "Omar Farouk", phone: "+201011167890", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-24T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-16`, patient_name: "Nermin Saeed", phone: "+201055545678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-20T10:00:00.000Z", time: "10:00" },
+        { id: `${doctorId}-17`, patient_name: "Mohammad Alaa", phone: "+201066756789", doctor_id: doctorId, status: "Completed", appointment_date: "2026-04-15T09:00:00.000Z", time: "09:00" },
       ]
+
+  return mockAppointments.map((appointment, index) => ({
+    id: appointment.id || `${doctorId}-${index}`,
+    status: appointment.status || 'Pending',
+    appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
+    time: appointment.time || '09:00',
+    ...appointment,
+  }))
 }
 
 function parseAppointmentDate(appointment) {
@@ -1104,12 +1171,20 @@ function DoctorCard({ doctor, index, ui }) {
         <p className="mt-1 text-sm text-cyan-700/80 dark:text-cyan-100/80">{localizedDoctor.specialty}</p>
       </div>
 
-      <Link
-        to={`/doctor/${localizedDoctor.id}`}
-        className="mt-5 inline-flex w-full items-center justify-center rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/20 via-sky-500/20 to-emerald-400/20 px-4 py-3 text-sm font-semibold text-cyan-800 transition duration-300 hover:-translate-y-0.5 hover:bg-cyan-400/25 dark:text-cyan-100"
-      >
-        {t('doctorViewProfile')}
-      </Link>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Link
+          to={`/dashboard?doctor=${localizedDoctor.id}`}
+          className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+        >
+          {ui.language === 'ar' ? 'فتح اللوحة' : 'Open Dashboard'}
+        </Link>
+        <Link
+          to={`/doctor/${localizedDoctor.id}`}
+          className="inline-flex w-full items-center justify-center rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/20 via-sky-500/20 to-emerald-400/20 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:-translate-y-0.5 hover:bg-cyan-400/25 dark:text-cyan-100"
+        >
+          {t('doctorViewProfile')}
+        </Link>
+      </div>
     </article>
   )
 }
@@ -1676,11 +1751,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[
-                { label: 'Latency', value: '< 1s', tone: 'text-cyan-700 dark:text-cyan-200' },
-                { label: 'Mode', value: 'Encrypted', tone: 'text-emerald-700 dark:text-emerald-200' },
-                { label: 'Storage', value: 'Supabase', tone: 'text-sky-700 dark:text-sky-200' },
-              ].map(item => (
+              {[].map(item => (
                 <div key={item.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
                   <p className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{item.label}</p>
                   <p className={`mt-2 text-lg font-semibold ${item.tone}`}>{item.value}</p>
@@ -1862,6 +1933,30 @@ function DashboardAccessPage({ ui }) {
     return () => {
       active = false
       subscription?.unsubscribe()
+    }
+  }, [])
+
+  // Prefill secret code from URL query if provided (e.g. ?code=HC-2026 or ?doctor=dr-mohamed-alafandi)
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      const params = new URLSearchParams(window.location.search)
+      const codeParam = params.get('code') || params.get('secret_code')
+      const doctorParam = params.get('doctor') || params.get('doctorId')
+
+      if (codeParam) {
+        setSecretCode(codeParam)
+        // immediately submit to load dashboard
+        setSubmittedCode(String(codeParam).trim())
+      } else if (doctorParam) {
+        const fallback = createFallbackDoctor(doctorParam)
+        if (fallback && fallback.secret_code) {
+          setSecretCode(fallback.secret_code)
+          setSubmittedCode(String(fallback.secret_code).trim())
+        }
+      }
+    } catch (e) {
+      // ignore
     }
   }, [])
 
@@ -2115,15 +2210,57 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
         </div>
 
         {doctor ? (
-          <div className="mt-6 rounded-[1.5rem] border border-cyan-300/15 bg-white/70 p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] dark:bg-slate-950/60">
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboardIdentity')}</p>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-slate-900 dark:text-white">{doctor.name}</h3>
-                <p className="mt-1 text-cyan-700/80 dark:text-cyan-100/80">{doctor.specialty}</p>
+          <div className="mt-8 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+            <div className="rounded-[1.5rem] border border-cyan-300/15 bg-gradient-to-br from-white/80 to-white/50 p-6 backdrop-blur-xl shadow-[0_12px_28px_rgba(15,23,42,0.05)] dark:from-slate-950/60 dark:to-slate-900/40 dark:bg-slate-950/60">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardIdentity')}</p>
+                  <h3 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{doctor.name}</h3>
+                  <p className="mt-2 text-lg text-cyan-700/80 dark:text-cyan-100/80">{doctor.specialty}</p>
+                </div>
+                
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {doctor.experience && (
+                    <div className="rounded-2xl border border-slate-200/50 bg-white/60 p-3 dark:border-white/10 dark:bg-white/5">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">خبرة</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{doctor.experience}</p>
+                    </div>
+                  )}
+                  {doctor.clinicLocation && (
+                    <div className="rounded-2xl border border-slate-200/50 bg-white/60 p-3 dark:border-white/10 dark:bg-white/5">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">العيادة</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{doctor.clinicLocation}</p>
+                    </div>
+                  )}
+                  {doctor.price && (
+                    <div className="rounded-2xl border border-slate-200/50 bg-white/60 p-3 dark:border-white/10 dark:bg-white/5">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">السعر</p>
+                      <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-100">{doctor.price}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="rounded-full border border-emerald-400/25 bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-100">
-                {doctor.secret_code || 'Code linked'}
+            </div>
+
+            <div className="rounded-[1.5rem] border border-emerald-300/20 bg-gradient-to-br from-emerald-50/80 to-emerald-100/40 p-5 backdrop-blur-xl dark:from-emerald-400/10 dark:to-emerald-500/5">
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-emerald-300/25 bg-white/80 p-4 dark:border-emerald-400/20 dark:bg-emerald-400/5">
+                  <p className="text-xs uppercase tracking-[0.3em] text-emerald-700/70 dark:text-emerald-200/70">كود الدخول</p>
+                  <p className="mt-2 text-2xl font-bold font-mono text-emerald-800 dark:text-emerald-100">{doctor.secret_code || 'HC-0000'}</p>
+                </div>
+                
+                <div className="rounded-2xl border border-cyan-300/25 bg-white/80 p-4 dark:border-cyan-400/20 dark:bg-cyan-400/5">
+                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-700/70 dark:text-cyan-200/70">معرّف الطبيب</p>
+                  <p className="mt-2 text-lg font-semibold font-mono text-cyan-800 dark:text-cyan-100 break-all">{doctor?.id || 'N/A'}</p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-300/25 bg-white/80 p-4 dark:border-sky-400/20 dark:bg-sky-400/5">
+                  <p className="text-xs uppercase tracking-[0.3em] text-sky-700/70 dark:text-sky-200/70">الحالة</p>
+                  <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-sky-800 dark:text-sky-100">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    نشط وجاهز
+                  </p>
+                </div>
               </div>
             </div>
           </div>
