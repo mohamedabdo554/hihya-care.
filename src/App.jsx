@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BrowserRouter,
@@ -23,11 +23,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { Mail, MessageCircleMore, Phone } from 'lucide-react'
 import DashboardPortfolio from './components/DashboardPortfolio.jsx'
 import PremiumDoctorProfile from './components/PremiumDoctorProfile.jsx'
+import CinematicAnalyticsDashboard from './components/CinematicAnalyticsDashboard.jsx'
 import { supabase } from './supabaseClient.js'
 
-const defaultLanguage = 'en'
+const defaultLanguage = 'ar'
 const defaultTheme = 'light'
 const queryClient = new QueryClient()
 
@@ -159,8 +161,8 @@ const translations = {
     dashboardCodeHelper: 'Each code maps to one doctor and one filtered queue.',
   },
   ar: {
-    navBrand: 'هيها كير',
-    navSubtitle: 'شبكة عيادة بطابع سايبربانك',
+    navBrand: 'هيهيا كير',
+    navSubtitle: 'شبكة عيادات بطابع سايبربانك',
     language: 'اللغة',
     theme: 'الوضع',
     light: 'فاتح',
@@ -175,7 +177,7 @@ const translations = {
     loadingDoctors: 'جارٍ تحميل الأطباء...',
     loadingProfile: 'جارٍ تحميل ملف الطبيب...',
     loadingAppointments: 'جارٍ تحميل المواعيد...',
-    fallbackNotice: 'بيانات Supabase غير متاحة الآن. يتم عرض محتوى تجريبي حتى تصبح الجداول جاهزة.',
+    fallbackNotice: 'بيانات Supabase غير متاحة حالياً. يتم عرض محتوى تجريبي حتى تصبح الجداول جاهزة.',
     profileTitle: 'ملف الطبيب',
     acceptingAppointments: 'يقبل الحجوزات',
     experience: 'الخبرة',
@@ -211,10 +213,10 @@ const translations = {
     whatsappCta: 'تحدث مع العيادة على واتساب',
     whatsappMissing: 'رقم واتساب الطبيب غير موجود في قاعدة البيانات.',
     whatsappQueued: 'تم تجهيز إشعار واتساب للطبيب.',
-    whatsappFallback: 'واجهة WhatsApp API غير مهيأة. استخدم رابط المحادثة بدلًا من ذلك.',
+    whatsappFallback: 'واجهة WhatsApp API غير مهيأة. استخدم رابط المحادثة بدلاً من ذلك.',
     dashboardLogin: 'محاكاة دخول الطبيب',
     dashboardAuthTitle: 'دخول آمن للطبيب',
-    dashboardAuthIntro: 'استخدم رابطًا سحريًا أو رمز OTP لتأكيد الجلسة قبل تحميل الطابور.',
+    dashboardAuthIntro: 'استخدم رابطاً سحرياً أو رمز OTP لتأكيد الجلسة قبل تحميل الطابور.',
     dashboardEmail: 'البريد الإلكتروني',
     dashboardEmailPlaceholder: 'doctor@hihyacare.com',
     sendMagicLink: 'إرسال الرابط السحري',
@@ -258,8 +260,8 @@ const translations = {
     supplyNotice: 'يتم عرض ملف الطبيب من الذاكرة المؤقتة حتى تصبح Supabase متاحة.',
     appointmentsFallbackNotice: 'جدول المواعيد غير جاهز بالكامل. يتم عرض بيانات تجريبية.',
     loadingProfileFromDb: 'جارٍ جلب الملف من Supabase.',
-    doctorUnknown: 'اختصاصي غير معروف',
-    doctorFallbackBio: 'ملف اختصاصي سينمائي متاح في صفحة التفاصيل.',
+    doctorUnknown: 'أخصائي غير معروف',
+    doctorFallbackBio: 'ملف أخصائي سينمائي متاح في صفحة التفاصيل.',
     doctorWhatsAppReady: 'جاهز لواتساب',
     doctorNoPhone: 'لا يوجد رقم هاتف',
     doctorViewProfile: 'عرض الملف',
@@ -282,68 +284,68 @@ const translations = {
     completedStatus: 'مكتمل',
     toggleStatus: 'تبديل الحالة',
     statusUpdated: 'تم تحديث الحالة',
-    dashboardCodeHelper: 'كل رمز يرتبط بطبيب واحد وبطابور مواعيد خاص به.',
+    dashboardCodeHelper: 'كل رمز يرتبط بطبيب واحد ولوحة مواعيد خاصة به.',
   },
 }
 
 const fallbackDoctors = [
   {
     id: 'dr-mohamed-alafandi',
-    name: 'د. محمد الافندي',
+    name: 'د. محمد الأفندي',
     name_en: 'Dr. Mohamed Al-Afandi',
-    name_ar: 'د. محمد الافندي',
+    name_ar: 'د. محمد الأفندي',
     specialty: 'جراحة عامة ومسالك بولية',
     specialty_en: 'General Surgery & Urology',
     specialty_ar: 'جراحة عامة ومسالك بولية',
     image_url: null,
-    bio: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة.',
+    bio: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية د. جمعة.',
     bio_en: '20 years of experience in general surgery and urology. Address: near the old National Bank, next to Dr. Gomaa Pharmacy.',
-    bio_ar: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة.',
+    bio_ar: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية د. جمعة.',
     price: 'استشارة حسب الكشف',
-    clinicLocation: 'عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة',
+    clinicLocation: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
     clinicLocation_en: 'Near the old National Bank, next to Dr. Gomaa Pharmacy',
-    clinicLocation_ar: 'عند البنك الأهلي القديم، بجوار صيدلية دكتور جمعة',
+    clinicLocation_ar: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
     clinic_link: 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
     phone_number: null,
     secret_code: 'HC-2026',
   },
   {
     id: 'dr-elya-nassar',
-    name: 'Dr. Elya Nassar',
-    specialty: 'Cardiologist',
+    name: 'د. إليا نصار',
+    specialty: 'طبيب قلب',
     image_url: null,
-    bio: '14 years in advanced cardiac care.',
-    price: '$90 consultation',
+    bio: '14 سنة في رعاية القلب المتقدمة.',
+    price: '90 دولار استشارة',
     phone_number: '+201001112233',
     secret_code: 'HC-9017',
   },
   {
     id: 'dr-adam-fahmy',
-    name: 'Dr. Adam Fahmy',
-    specialty: 'Neurologist',
+    name: 'د. آدم فهمي',
+    specialty: 'طبيب أعصاب',
     image_url: null,
-    bio: '11 years in neuro diagnostics.',
-    price: '$110 consultation',
+    bio: '11 سنة في تشخيص أمراض الأعصاب.',
+    price: '110 دولار استشارة',
     phone_number: '+201002223344',
     secret_code: 'HC-1142',
   },
   {
     id: 'dr-sara-adel',
-    name: 'Dr. Sara Adel',
-    specialty: 'Pediatrician',
+    name: 'د. سارة عادل',
+    specialty: 'طبيب أطفال',
     image_url: null,
-    bio: '9 years in child wellness.',
-    price: '$75 consultation',
+    bio: '9 سنوات في رعاية الأطفال.',
+    price: '75 دولار استشارة',
     phone_number: '+201003334455',
     secret_code: 'HC-2608',
   },
   {
     id: 'dr-omar-ibrahim',
-    name: 'Dr. Omar Ibrahim',
-    specialty: 'Orthopedic Surgeon',
+    name: 'د. عمر إبراهيم',
+    specialty: 'جراح عظام',
     image_url: null,
-    bio: '16 years in mobility restoration.',
-    price: '$120 consultation',
+    bio: '16 سنة في استعادة الحركة والعظام.',
+    price: '120 دولار استشارة',
     phone_number: '+201004445566',
     secret_code: 'HC-7784',
   },
@@ -470,8 +472,8 @@ const specialtyMap = {
     Cardiologist: 'طبيب قلب',
     Neurologist: 'طبيب أعصاب',
     Pediatrician: 'طبيب أطفال',
-    'Orthopedic Surgeon': 'جرّاح عظام',
-    Specialist: 'اختصاصي',
+    'Orthopedic Surgeon': 'جراح عظام',
+    Specialist: 'أخصائي',
   },
 }
 
@@ -484,10 +486,10 @@ const bioMap = {
     Specialist: 'Cinematic specialist profile available on the details page.',
   },
   ar: {
-    Cardiologist: '١٤ سنة في رعاية القلب المتقدمة.',
-    Neurologist: '١١ سنة في تشخيص أمراض الأعصاب.',
-    Pediatrician: '٩ سنوات في رعاية الأطفال.',
-    'Orthopedic Surgeon': '١٦ سنة في استعادة الحركة والعظام.',
+    Cardiologist: '14 سنة في رعاية القلب المتقدمة.',
+    Neurologist: '11 سنة في تشخيص أمراض الأعصاب.',
+    Pediatrician: '9 سنوات في رعاية الأطفال.',
+    'Orthopedic Surgeon': '16 سنة في استعادة الحركة والعظام.',
     Specialist: 'ملف اختصاصي سينمائي متاح في صفحة التفاصيل.',
   },
 }
@@ -501,11 +503,11 @@ const locationMap = {
     Specialist: 'Hihya Care main wing',
   },
   ar: {
-    Cardiologist: 'جناح أمراض القلب - هيها كير',
-    Neurologist: 'جناح الأعصاب - هيها كير',
-    Pediatrician: 'جناح الأطفال - هيها كير',
-    'Orthopedic Surgeon': 'وحدة العظام - هيها كير',
-    Specialist: 'الجناح الرئيسي - هيها كير',
+    Cardiologist: 'جناح أمراض القلب - هيهيا كير',
+    Neurologist: 'جناح الأعصاب - هيهيا كير',
+    Pediatrician: 'جناح الأطفال - هيهيا كير',
+    'Orthopedic Surgeon': 'وحدة العظام - هيهيا كير',
+    Specialist: 'الجناح الرئيسي - هيهيا كير',
   },
 }
 
@@ -595,12 +597,20 @@ function createFallbackAppointments(doctorId, language) {
 
   return language === 'ar'
     ? [
-        { id: `${doctorId}-1`, patient_name: 'أية محمود', phone: '+201055501234', doctor_id: doctorId, status: 'Pending', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
-        { id: `${doctorId}-2`, patient_name: 'مينا عادل', phone: '+201066602345', doctor_id: doctorId, status: 'In Clinic', appointment_date: '2026-05-02T09:20:00.000Z', time: '09:20' },
+        { id: `${doctorId}-1`, patient_name: "\u0623\u064a\u0629 \u0645\u062d\u0645\u0648\u062f", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-2`, patient_name: "\u0645\u064a\u0646\u0627 \u0639\u0627\u062f\u0644", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-02T09:20:00.000Z", time: "09:20" },
+        { id: `${doctorId}-3`, patient_name: "\u0633\u0627\u0631\u0629 \u0641\u0624\u0627\u062f", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:10:00.000Z", time: "10:10" },
+        { id: `${doctorId}-4`, patient_name: "\u064a\u0627\u0633\u0631 \u062d\u0633\u0646", phone: "+201033304567", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T16:40:00.000Z", time: "16:40" },
+        { id: `${doctorId}-5`, patient_name: "\u062f\u064a\u0646\u0627 \u0634\u0631\u064a\u0641", phone: "+201044405678", doctor_id: doctorId, status: "Cancelled", appointment_date: "2026-05-02T17:15:00.000Z", time: "17:15" },
+        { id: `${doctorId}-6`, patient_name: "\u0645\u062d\u0645\u062f \u0633\u0627\u0645\u062d", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T18:00:00.000Z", time: "18:00" },
       ]
     : [
-        { id: `${doctorId}-1`, patient_name: 'Aya Mahmoud', phone: '+201055501234', doctor_id: doctorId, status: 'Pending', appointment_date: '2026-05-02T09:00:00.000Z', time: '09:00' },
-        { id: `${doctorId}-2`, patient_name: 'Mina Adel', phone: '+201066602345', doctor_id: doctorId, status: 'In Clinic', appointment_date: '2026-05-02T09:20:00.000Z', time: '09:20' },
+        { id: `${doctorId}-1`, patient_name: "Aya Mahmoud", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
+        { id: `${doctorId}-2`, patient_name: "Mina Adel", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-02T09:20:00.000Z", time: "09:20" },
+        { id: `${doctorId}-3`, patient_name: "Sara Fouad", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:10:00.000Z", time: "10:10" },
+        { id: `${doctorId}-4`, patient_name: "Yasser Hassan", phone: "+201033304567", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T16:40:00.000Z", time: "16:40" },
+        { id: `${doctorId}-5`, patient_name: "Dina Sherif", phone: "+201044405678", doctor_id: doctorId, status: "Cancelled", appointment_date: "2026-05-02T17:15:00.000Z", time: "17:15" },
+        { id: `${doctorId}-6`, patient_name: "Mohamed Sameh", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-02T18:00:00.000Z", time: "18:00" },
       ]
 }
 
@@ -898,6 +908,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage doctors={doctors} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
           <Route path="/portfolio" element={<DashboardPortfolio />} />
+          <Route path="/analytics" element={<CinematicAnalyticsDashboard theme={ui.theme} />} />
           <Route path="/doctor/premium-preview" element={<PremiumDoctorProfile />} />
           <Route path="/doctor/:doctorId" element={<DoctorProfilePage loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
           <Route path="/book/:doctorId" element={<BookingPage doctorLookup={doctorLookup} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
@@ -918,18 +929,20 @@ function AppShell({ children, ui }) {
 
   return (
     <main className={`relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 ${themePulse ? 'theme-fade' : ''}`}>
+      {/* DEBUG BANNER: visible to confirm the React app is rendering in the browser */}
+      <div id="debug-banner" className="fixed left-4 top-4 z-[9999] bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">Debug: AppShell rendered — lang: {language} theme: {theme}</div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.08),_transparent_32%)] dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.22),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.16),_transparent_32%),linear-gradient(180deg,_rgba(2,6,23,0.96),_rgba(2,6,23,1))]" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:64px_64px] opacity-20 [mask-image:radial-gradient(circle_at_center,black,transparent_82%)] dark:bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)]" />
       <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-400/20" />
       <div className="absolute right-10 top-24 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-500/10" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-8 rounded-3xl border border-slate-200 bg-white/90 px-5 py-4 shadow-[0_20px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-none">
+        <header className="sticky top-3 z-30 mb-4 rounded-[1.4rem] border border-slate-200/80 bg-white/88 px-4 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-slate-950/72 dark:shadow-[0_0_40px_rgba(34,211,238,0.08)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <Link to="/" className="flex items-center gap-3 text-slate-900 dark:text-cyan-100">
               <HihyaEmblem theme={theme} />
               <span className="flex flex-col">
-                <span className="text-sm font-semibold uppercase tracking-[0.35em]">{t('navBrand')}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.42em]">{t('navBrand')}</span>
                 <span className="text-[11px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
                   {isArabic ? 'هوية طبية مستقبلية' : 'Futuristic medical identity'}
                 </span>
@@ -1004,7 +1017,66 @@ function AppShell({ children, ui }) {
           </div>
         </header>
 
-        <div dir={isArabic ? 'rtl' : 'ltr'}>{children}</div>
+        <div dir={isArabic ? 'rtl' : 'ltr'}>
+          {children}
+
+          <footer className="mt-8 rounded-[1.75rem] border border-slate-200 bg-white/92 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">
+                  {isArabic ? 'دعم العيادة' : 'Clinic support'}
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">
+                  {isArabic ? 'للاستفسار أو الحجز أو المتابعة' : 'For booking, questions, or follow-up'}
+                </h3>
+                <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  <p>{isArabic ? 'فريق الدعم جاهز لمساعدتك في أي استفسار عن التجربة أو الحجز.' : 'The support team is ready to help with any booking or demo question.'}</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'بيانات التواصل المباشر' : 'Direct contact details'}
+                  </p>
+                  <p><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الاسم' : 'Name'}:</span> Mohammed Abdelkarim</p>
+                  <p><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الرقم' : 'Phone'}:</span> 01013988098</p>
+                  <p><span className="font-semibold text-slate-900 dark:text-white">{isArabic ? 'الإيميل' : 'Email'}:</span> mohammed.abdelkarim2025@gmail.com</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="https://wa.me/201013988098"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-400/15 dark:text-emerald-100"
+                >
+                  <MessageCircleMore size={16} />
+                  <span className="flex flex-col text-start leading-tight">
+                    <span>{isArabic ? 'واتساب' : 'WhatsApp'}</span>
+                    <span className="text-xs font-normal opacity-80">01013988098</span>
+                  </span>
+                </a>
+                <a
+                  href="mailto:mohammed.abdelkarim2025@gmail.com"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-400/15 dark:text-cyan-100"
+                >
+                  <Mail size={16} />
+                  <span className="flex flex-col text-start leading-tight">
+                    <span>{isArabic ? 'إيميل' : 'Email'};</span>
+                    <span className="text-xs font-normal opacity-80">mohammed.abdelkarim2025@gmail.com</span>
+                  </span>
+                </a>
+                <a
+                  href="tel:+201013988098"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-300/50 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
+                >
+                  <Phone size={16} />
+                  <span className="flex flex-col text-start leading-tight">
+                    <span>{isArabic ? 'اتصال' : 'Call'}</span>
+                    <span className="text-xs font-normal opacity-80">+20 101 398 8098</span>
+                  </span>
+                </a>
+              </div>
+            </div>
+          </footer>
+        </div>
       </div>
     </main>
   )
@@ -1016,8 +1088,8 @@ function DoctorCard({ doctor, index, ui }) {
   const localizedDoctor = localizeDoctor(ui.language, doctor)
 
   return (
-    <article className="group rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-[0_0_120px_rgba(34,211,238,0.16)] dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-[0_0_80px_rgba(34,211,238,0.08)]">
-      <div className={`flex aspect-square h-18 w-18 items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-gradient-to-br ${avatarGradient} shadow-inner dark:border-white/10`}>
+    <article className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-[0_0_120px_rgba(34,211,238,0.16)] dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-[0_0_80px_rgba(34,211,238,0.08)]">
+      <div className={`flex aspect-square h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-gradient-to-br ${avatarGradient} shadow-inner dark:border-white/10`}>
         {localizedDoctor.image_url ? (
           <img src={localizedDoctor.image_url} alt={localizedDoctor.name} className="h-full w-full object-cover" />
         ) : (
@@ -1035,6 +1107,10 @@ function DoctorCard({ doctor, index, ui }) {
             />
           </svg>
         )}
+      </div>
+
+      <div className="absolute right-4 top-4 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-700 dark:text-cyan-100">
+        {ui.language === 'ar' ? 'مميز للحجز' : 'Featured for booking'}
       </div>
 
       <div className="mt-5">
@@ -1262,7 +1338,7 @@ function DoctorProfilePage({ loading, notice, ui }) {
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <InfoPanel label={t('experience')} value={doctor.experience || doctor.bio || getText(ui.language, 'doctorFallbackBio')} />
-            <InfoPanel label={t('clinicLocation')} value={doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيها كير' : 'Hihya Care main wing')} />
+            <InfoPanel label={t('clinicLocation')} value={doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيهيا كير' : 'Hihya Care main wing')} />
             <InfoPanel label={t('price')} value={doctor.price} />
           </div>
 
@@ -1316,7 +1392,7 @@ function DoctorProfilePage({ loading, notice, ui }) {
             <p className="text-sm text-slate-600 dark:text-slate-300">{t('specialty')}</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">{doctor.specialty}</p>
             <p className="mt-6 text-sm text-slate-600 dark:text-slate-300">{t('clinicLocation')}</p>
-            <p className="mt-1 text-lg text-cyan-800 dark:text-cyan-100">{doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيها كير' : 'Hihya Care main wing')}</p>
+            <p className="mt-1 text-lg text-cyan-800 dark:text-cyan-100">{doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيهيا كير' : 'Hihya Care main wing')}</p>
             <p className="mt-6 text-sm text-slate-600 dark:text-slate-300">{t('consultationFee')}</p>
             <p className="mt-1 text-lg text-emerald-700 dark:text-emerald-100">{doctor.price}</p>
             <p className="mt-6 text-sm text-slate-600 dark:text-slate-300">{t('whatsapp')}</p>
@@ -1539,7 +1615,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
       setStatus('success')
       setFeedback(
         ui.language === 'ar'
-          ? `تم تأكيد الموعد وحفظه محليًا مؤقتًا بسبب مشكلة في Supabase. ${localAppointment.patient_name}`
+          ? `تم تأكيد الموعد وحفظه محلياً مؤقتاً بسبب مشكلة في Supabase. ${localAppointment.patient_name}`
           : `Appointment confirmed and saved locally because Supabase rejected the insert. ${localAppointment.patient_name}`,
       )
       setToast({
@@ -2265,3 +2341,4 @@ function InfoPanel({ label, value, ui }) {
 }
 
 export default App
+
