@@ -1,11 +1,13 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   BrowserRouter,
   Link,
   Navigate,
   Route,
   Routes,
+  useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom'
@@ -23,10 +25,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Mail, MessageCircleMore, Phone } from 'lucide-react'
+import { Clock, Mail, MapPin, MessageCircleMore, Phone, Star, Wallet } from 'lucide-react'
 import DashboardPortfolio from './components/DashboardPortfolio.jsx'
 import PremiumDoctorProfile from './components/PremiumDoctorProfile.jsx'
 import CinematicAnalyticsDashboard from './components/CinematicAnalyticsDashboard.jsx'
+import DoctorReviewAnalytics from './components/DoctorReviewAnalytics.jsx'
+import DoctorAvailabilityShowcase from './components/DoctorAvailabilityShowcase.jsx'
+import ReviewFeedbackCard from './components/ReviewFeedbackCard.jsx'
 import { supabase } from './supabaseClient.js'
 
 const defaultLanguage = 'ar'
@@ -158,6 +163,68 @@ const translations = {
     toggleStatus: 'Toggle Status',
     statusUpdated: 'Status updated',
     dashboardCodeHelper: 'Each code maps to one doctor and one filtered queue.',
+    reviewPortal: 'Review Portal',
+    reviewTitle: 'Share your consultation review',
+    reviewSubtitle: 'Your insight helps Hihya Care refine the clinical experience.',
+    reviewRatingLabel: 'Your rating',
+    reviewCommentLabel: 'Your experience',
+    reviewCommentPlaceholder: 'Describe what stood out about the visit.',
+    reviewSubmit: 'Submit Review',
+    reviewSubmitting: 'Submitting',
+    reviewThankYouTitle: 'Thank you',
+    reviewThankYouBody: 'Your feedback was delivered to the care team.',
+    reviewRatingRequired: 'Please select a rating before submitting.',
+    reviewLockedTitle: 'Review locked',
+    reviewLockedBody: 'Reviews unlock after the appointment is marked Completed.',
+    reviewLockedCaption: 'Appointment status',
+    reviewAuthRequired: 'Please sign in to submit a review.',
+    reviewSavedLocal: 'Supabase is offline. Review saved locally.',
+    reviewFallbackNotice: 'Supabase reviews table is not available. Showing local reviews.',
+    reviewAnalyticsTitle: 'Review Analytics',
+    reviewAverageLabel: 'Average Rating',
+    reviewTotalLabel: 'Total Reviews',
+    reviewDistributionLabel: 'Rating Distribution',
+    reviewRecentLabel: 'Recent Reviews',
+    reviewEmpty: 'No reviews yet.',
+    reviewPatientFallback: 'Patient',
+    reviewCommentFallback: 'No comment provided.',
+    reviewOpen: 'Open Review',
+    reviewUnavailable: 'Review available after completion',
+    reviewPatientFeedback: 'Patient feedback',
+    reviewProfileLabel: 'Patient Rating',
+    reviewLoading: 'Loading reviews...',
+    reviewNotFound: 'Review link not found.',
+    reviewNotReady: 'Review not available yet.',
+    reviewAppointmentLabel: 'Appointment',
+    reviewDoctorLabel: 'Doctor',
+    availabilityKicker: 'Quick booking',
+    availabilityTitle: 'Available slots',
+    availabilitySubtitle: 'Pick a time window before you arrive.',
+    availabilitySelectDoctor: 'Select doctor',
+    availabilityToday: 'Today',
+    availabilityTomorrow: 'Tomorrow',
+    availabilityDayAfter: 'After tomorrow',
+    availabilityFrom: 'From',
+    availabilityTo: 'To',
+    availabilityBook: 'Book',
+    availabilityNote: 'Advance booking, entry by arrival order.',
+    availabilityRatingLabel: 'Overall rating',
+    availabilityRatingCount: count => `${count} reviews`,
+    availabilityRatingEmpty: 'New',
+    availabilityPriceLabel: 'Consultation',
+    availabilityPaymentLabel: 'Payment',
+    availabilityPaymentValue: 'Online / Cash',
+    availabilityWaitLabel: 'Wait time',
+    availabilityWaitValue: minutes => `${minutes} min`,
+    availabilityLocationLabel: 'Location',
+    availabilityAvailabilityLabel: 'Status',
+    availabilityAvailabilityValue: 'Open today',
+    availabilityTagOne: 'Detailed explanation',
+    availabilityTagTwo: 'Good listener',
+    availabilityTagThree: 'Fast booking',
+    availabilityBookNow: 'Book now',
+    availabilityViewProfile: 'View profile',
+    availabilityLoading: 'Loading doctor',
   },
   ar: {
     navBrand: 'هيهيا كير',
@@ -283,23 +350,89 @@ const translations = {
     toggleStatus: 'تبديل الحالة',
     statusUpdated: 'تم تحديث الحالة',
     dashboardCodeHelper: 'كل رمز يرتبط بطبيب واحد ولوحة مواعيد خاصة به.',
+    reviewPortal: 'بوابة التقييم',
+    reviewTitle: 'شارك تقييم زيارتك',
+    reviewSubtitle: 'رأيك يساعد Hihya Care على تحسين التجربة الطبية.',
+    reviewRatingLabel: 'تقييمك',
+    reviewCommentLabel: 'تجربتك',
+    reviewCommentPlaceholder: 'اكتب ما الذي أعجبك في الزيارة.',
+    reviewSubmit: 'إرسال التقييم',
+    reviewSubmitting: 'جارٍ الإرسال',
+    reviewThankYouTitle: 'شكراً لك',
+    reviewThankYouBody: 'تم إرسال ملاحظاتك لفريق الرعاية.',
+    reviewRatingRequired: 'يرجى اختيار عدد النجوم قبل الإرسال.',
+    reviewLockedTitle: 'التقييم غير متاح',
+    reviewLockedBody: 'يتاح التقييم بعد تحويل الموعد إلى مكتمل.',
+    reviewLockedCaption: 'حالة الموعد',
+    reviewAuthRequired: 'يرجى تسجيل الدخول لإرسال التقييم.',
+    reviewSavedLocal: 'Supabase غير متاح. تم حفظ التقييم محلياً.',
+    reviewFallbackNotice: 'جدول التقييمات غير متاح. يتم عرض البيانات المحلية.',
+    reviewAnalyticsTitle: 'تحليلات التقييم',
+    reviewAverageLabel: 'متوسط التقييم',
+    reviewTotalLabel: 'إجمالي التقييمات',
+    reviewDistributionLabel: 'توزيع التقييمات',
+    reviewRecentLabel: 'أحدث التقييمات',
+    reviewEmpty: 'لا توجد تقييمات بعد.',
+    reviewPatientFallback: 'مريض',
+    reviewCommentFallback: 'لا توجد ملاحظة مكتوبة.',
+    reviewOpen: 'فتح التقييم',
+    reviewUnavailable: 'التقييم بعد اكتمال الموعد',
+    reviewPatientFeedback: 'ملاحظات المرضى',
+    reviewProfileLabel: 'تقييم المرضى',
+    reviewLoading: 'جارٍ تحميل التقييمات...',
+    reviewNotFound: 'لم يتم العثور على رابط التقييم.',
+    reviewNotReady: 'التقييم غير متاح بعد.',
+    reviewAppointmentLabel: 'الموعد',
+    reviewDoctorLabel: 'الطبيب',
+    availabilityKicker: 'حجز سريع',
+    availabilityTitle: 'المواعيد المتاحة',
+    availabilitySubtitle: 'اختر الوقت المناسب قبل الوصول.',
+    availabilitySelectDoctor: 'اختر الطبيب',
+    availabilityToday: 'اليوم',
+    availabilityTomorrow: 'غدا',
+    availabilityDayAfter: 'بعد غد',
+    availabilityFrom: 'من',
+    availabilityTo: 'حتى',
+    availabilityBook: 'احجز',
+    availabilityNote: 'الحجز مسبقا والدخول بأسبقية الحضور.',
+    availabilityRatingLabel: 'التقييم العام',
+    availabilityRatingCount: count => `${count} تقييم`,
+    availabilityRatingEmpty: 'جديد',
+    availabilityPriceLabel: 'الكشف',
+    availabilityPaymentLabel: 'الدفع',
+    availabilityPaymentValue: 'أونلاين / كاش',
+    availabilityWaitLabel: 'مدة الانتظار',
+    availabilityWaitValue: minutes => `${minutes} دقيقة`,
+    availabilityLocationLabel: 'الموقع',
+    availabilityAvailabilityLabel: 'الحالة',
+    availabilityAvailabilityValue: 'متاح اليوم',
+    availabilityTagOne: 'شرح مفصل',
+    availabilityTagTwo: 'مستمع جيد',
+    availabilityTagThree: 'حجز سريع',
+    availabilityBookNow: 'احجز الآن',
+    availabilityViewProfile: 'عرض الملف',
+    availabilityLoading: 'جارٍ تحميل الطبيب',
   },
 }
 
 const fallbackDoctors = [
   {
     id: 'dr-mohamed-alafandi',
-    name: 'د. محمد الأفندي',
-    name_en: 'Dr. Mohamed Al-Afandi',
-    name_ar: 'د. محمد الأفندي',
-    specialty: 'جراحة عامة ومسالك بولية',
-    specialty_en: 'General Surgery & Urology',
-    specialty_ar: 'جراحة عامة ومسالك بولية',
-    image_url: null,
-    bio: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية د. جمعة.',
-    bio_en: '20 years of experience in general surgery and urology. Address: near the old National Bank, next to Dr. Gomaa Pharmacy.',
-    bio_ar: 'خبرة 20 سنة في الجراحة العامة والمسالك البولية. العنوان: عند البنك الأهلي القديم، بجوار صيدلية د. جمعة.',
+    name: 'د. محمد حسن الأفندي',
+    name_en: 'Dr. Mohamed Hassan El Afandy',
+    name_ar: 'د. محمد حسن الأفندي',
+    specialty: 'مسالك بولية وحصوات وجراحة مناظير',
+    specialty_en: 'Urology, Stones & Endoscopic Surgery',
+    specialty_ar: 'مسالك بولية وحصوات وجراحة مناظير',
+    specialties: ['مسالك بولية', 'حصوات', 'جراحة مناظير', 'ذكورة', 'عقم الرجال'],
+    gender: 'male',
+    availability: ['today', 'tomorrow'],
+    image_url: '/doctors/mohamed-afandy.png',
+    bio: 'استشاري جراحة ومناظير المسالك البولية والكلى وأمراض الذكورة والبروستاتا وعقم الرجال.',
+    bio_en: 'Consultant in endoscopic urology, kidney stones, andrology, prostate and infertility.',
+    bio_ar: 'استشاري جراحة ومناظير المسالك البولية والكلى وأمراض الذكورة والبروستاتا وعقم الرجال.',
     price: 'استشارة حسب الكشف',
+    price_value: 120,
     clinicLocation: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
     clinicLocation_en: 'Near the old National Bank, next to Dr. Gomaa Pharmacy',
     clinicLocation_ar: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
@@ -311,9 +444,13 @@ const fallbackDoctors = [
     id: 'dr-elya-nassar',
     name: 'د. إليا نصار',
     specialty: 'طبيب قلب',
+    specialties: ['قلب واوعية دموية'],
+    gender: 'male',
+    availability: ['today'],
     image_url: null,
     bio: '14 سنة في رعاية القلب المتقدمة.',
     price: '90 دولار استشارة',
+    price_value: 90,
     phone_number: '+201001112233',
     secret_code: 'HC-9017',
   },
@@ -321,9 +458,13 @@ const fallbackDoctors = [
     id: 'dr-adam-fahmy',
     name: 'د. آدم فهمي',
     specialty: 'طبيب أعصاب',
+    specialties: ['مخ واعصاب'],
+    gender: 'male',
+    availability: ['tomorrow'],
     image_url: null,
     bio: '11 سنة في تشخيص أمراض الأعصاب.',
     price: '110 دولار استشارة',
+    price_value: 110,
     phone_number: '+201002223344',
     secret_code: 'HC-1142',
   },
@@ -331,9 +472,13 @@ const fallbackDoctors = [
     id: 'dr-sara-adel',
     name: 'د. سارة عادل',
     specialty: 'طبيب أطفال',
+    specialties: ['اطفال وحديثي الولادة'],
+    gender: 'female',
+    availability: ['today', 'tomorrow'],
     image_url: null,
     bio: '9 سنوات في رعاية الأطفال.',
     price: '75 دولار استشارة',
+    price_value: 75,
     phone_number: '+201003334455',
     secret_code: 'HC-2608',
   },
@@ -341,11 +486,231 @@ const fallbackDoctors = [
     id: 'dr-omar-ibrahim',
     name: 'د. عمر إبراهيم',
     specialty: 'جراح عظام',
+    specialties: ['عظام'],
+    gender: 'male',
+    availability: ['this-week'],
     image_url: null,
     bio: '16 سنة في استعادة الحركة والعظام.',
     price: '120 دولار استشارة',
+    price_value: 120,
     phone_number: '+201004445566',
     secret_code: 'HC-7784',
+  },
+  {
+    id: 'dr-asmaa-desouky',
+    name: 'د. أسماء دسوقي',
+    name_en: 'Dr. Asmaa Desouky',
+    name_ar: 'د. أسماء دسوقي',
+    specialty: 'جلدية وتجميل وليزر',
+    specialty_en: 'Dermatology, Cosmetic & Laser',
+    specialty_ar: 'جلدية وتجميل وليزر',
+    specialties: ['جلدية', 'تجميل', 'ليزر'],
+    gender: 'female',
+    availability: ['today', 'tomorrow'],
+    image_url: null,
+    bio: 'عيادة مرواد للجلدية والتجميل والليزر في ههيا.',
+    bio_en: 'Marwad Dermatology, Cosmetic & Laser Clinic in Hehya.',
+    bio_ar: 'عيادة مرواد للجلدية والتجميل والليزر في ههيا.',
+    price: 'استشارة حسب الكشف',
+    price_value: 80,
+    clinicLocation: 'ههيا، شارع الجمهورية، أعلى صيدلية الضريبي',
+    clinicLocation_en: 'El-Gomhoreya St, above El-Dariby Pharmacy, Hehya',
+    clinicLocation_ar: 'ههيا، شارع الجمهورية، أعلى صيدلية الضريبي',
+    clinic_link: 'https://maps.app.goo.gl/Sz17GxRQXXSpVZpH9',
+    phone_number: '01154041649',
+    secret_code: 'HC-3321',
+  },
+  {
+    id: 'dr-nagy-derma',
+    name: 'د. ناجي',
+    name_en: 'Dr. Nagy',
+    name_ar: 'د. ناجي',
+    specialty: 'جلدية',
+    specialty_en: 'Dermatology',
+    specialty_ar: 'جلدية',
+    specialties: ['جلدية'],
+    gender: 'male',
+    availability: ['today'],
+    image_url: null,
+    bio: 'متخصص في الجلدية والعناية بالبشرة.',
+    bio_en: 'Specialist in dermatology and skin care.',
+    bio_ar: 'متخصص في الجلدية والعناية بالبشرة.',
+    price: 'استشارة حسب الكشف',
+    price_value: 60,
+    clinicLocation: 'El-Gomhoreya St, Hehya (MHFQ+C7M)',
+    clinicLocation_en: 'El-Gomhoreya St, Hehya (MHFQ+C7M)',
+    clinicLocation_ar: 'شارع الجمهورية، ههيا (MHFQ+C7M)',
+    clinic_link: 'https://maps.google.com/?q=MHFQ%2BC7M%2C%20El-Gomhoreya%20St%2C%20Hehya',
+    phone_number: null,
+    secret_code: 'HC-5638',
+  },
+  {
+    id: 'dr-mohamed-shabrawy',
+    name: 'د. محمد الشبراوي',
+    name_en: 'Dr. Mohamed El Shabrawy',
+    name_ar: 'د. محمد الشبراوي',
+    specialty: 'أمراض صدرية',
+    specialty_en: 'Chest Diseases',
+    specialty_ar: 'أمراض صدرية',
+    specialties: ['باطنة', 'أمراض صدرية'],
+    gender: 'male',
+    availability: ['tomorrow'],
+    image_url: null,
+    bio: 'خبرة في أمراض الصدر والجهاز التنفسي.',
+    bio_en: 'Experience in chest and respiratory diseases.',
+    bio_ar: 'خبرة في أمراض الصدر والجهاز التنفسي.',
+    price: 'استشارة حسب الكشف',
+    price_value: 70,
+    clinicLocation: 'عيادة أمراض صدرية - ههيا',
+    clinicLocation_en: 'Chest Diseases Clinic - Hehya',
+    clinicLocation_ar: 'عيادة أمراض صدرية - ههيا',
+    clinic_link: 'https://maps.app.goo.gl/u5AGRUgwBN8dfWoZ8',
+    phone_number: null,
+    secret_code: 'HC-4407',
+  },
+  {
+    id: 'dr-mohamed-abdelbaset',
+    name: 'د. محمد عبدالباسط',
+    name_en: 'Dr. Mohamed Abdelbaset',
+    name_ar: 'د. محمد عبدالباسط',
+    specialty: 'قلب وقسطرة',
+    specialty_en: 'Cardiology & Catheterization',
+    specialty_ar: 'قلب وقسطرة',
+    specialties: ['قلب واوعية دموية'],
+    gender: 'male',
+    availability: ['today'],
+    image_url: null,
+    bio: 'استشاري أول القلب والقسطرة - جامعة الزقازيق.',
+    bio_en: 'Senior cardiology & catheterization consultant - Zagazig University.',
+    bio_ar: 'استشاري أول القلب والقسطرة - جامعة الزقازيق.',
+    price: 'استشارة حسب الكشف',
+    price_value: 150,
+    clinicLocation: 'عيادة القلب والقسطرة - ههيا',
+    clinicLocation_en: 'Cardiology & Cath Clinic - Hehya',
+    clinicLocation_ar: 'عيادة القلب والقسطرة - ههيا',
+    clinic_link: 'https://maps.app.goo.gl/YGaht1rGot6deUxT9',
+    phone_number: null,
+    secret_code: 'HC-7814',
+  },
+  {
+    id: 'dr-ahmed-ghazy',
+    name: 'د. أحمد غازي',
+    name_en: 'Dr. Ahmed Ghazy',
+    name_ar: 'د. أحمد غازي',
+    specialty: 'جلدية وتناسلية وتجميل',
+    specialty_en: 'Dermatology, Andrology & Cosmetic',
+    specialty_ar: 'جلدية وتناسلية وتجميل',
+    specialties: ['جلدية', 'تجميل'],
+    gender: 'male',
+    availability: ['tomorrow'],
+    image_url: null,
+    bio: 'عيادة للجلدية والتناسلية والتجميل.',
+    bio_en: 'Dermatology, andrology and cosmetic clinic.',
+    bio_ar: 'عيادة للجلدية والتناسلية والتجميل.',
+    price: 'استشارة حسب الكشف',
+    price_value: 90,
+    clinicLocation: 'عيادة الجلدية والتجميل - ههيا',
+    clinicLocation_en: 'Dermatology & Cosmetic Clinic - Hehya',
+    clinicLocation_ar: 'عيادة الجلدية والتجميل - ههيا',
+    clinic_link: 'https://maps.app.goo.gl/pUS1XXoEm4QsKpnTA',
+    phone_number: null,
+    secret_code: 'HC-6024',
+  },
+  {
+    id: 'dr-hassan-nafea',
+    name: 'د. حسن نافع',
+    name_en: 'Dr. Hassan Nafea',
+    name_ar: 'د. حسن نافع',
+    specialty: 'عظام',
+    specialty_en: 'Orthopedics',
+    specialty_ar: 'عظام',
+    specialties: ['عظام'],
+    gender: 'male',
+    availability: ['today', 'this-week'],
+    image_url: null,
+    bio: 'عيادة عظام بجوار صيدلية السلام وحلويات شروق.',
+    bio_en: 'Orthopedic clinic near El Salam Pharmacy and Shorouq Sweets.',
+    bio_ar: 'عيادة عظام بجوار صيدلية السلام وحلويات شروق.',
+    price: 'استشارة حسب الكشف',
+    price_value: 85,
+    clinicLocation: 'Ahmed Oraby St, Hehya - بجوار صيدلية السلام',
+    clinicLocation_en: 'Ahmed Oraby St, near El Salam Pharmacy',
+    clinicLocation_ar: 'شارع أحمد عرابي، بجوار صيدلية السلام',
+    clinic_link: 'https://maps.app.goo.gl/iU3GrsV32xBkPuVG8',
+    phone_number: null,
+    secret_code: 'HC-9142',
+  },
+  {
+    id: 'dr-ayman-makawi',
+    name: 'د. أيمن عبداللطيف مكاوي',
+    name_en: 'Dr. Ayman Abdelatif Makawi',
+    name_ar: 'د. أيمن عبداللطيف مكاوي',
+    specialty: 'باطنة',
+    specialty_en: 'Internal Medicine',
+    specialty_ar: 'باطنة',
+    specialties: ['باطنة'],
+    gender: 'male',
+    availability: ['tomorrow'],
+    image_url: null,
+    bio: 'عيادة بجوار البوسطة القديمة أمام محطة القطار.',
+    bio_en: 'Clinic near the old post office, opposite the train station.',
+    bio_ar: 'عيادة بجوار البوسطة القديمة أمام محطة القطار.',
+    price: 'استشارة حسب الكشف',
+    price_value: 70,
+    clinicLocation: 'شارع عمر بن الخطاب، بجوار البوسطة القديمة',
+    clinicLocation_en: 'Omar Ibn El-Khattab St, near the old post office',
+    clinicLocation_ar: 'شارع عمر بن الخطاب، بجوار البوسطة القديمة',
+    clinic_link: 'https://maps.app.goo.gl/93n78fzvK2kn9RJf7',
+    phone_number: null,
+    secret_code: 'HC-4059',
+  },
+  {
+    id: 'dr-mostafa-elshamy',
+    name: 'أ.د. مصطفى الشامي',
+    name_en: 'Prof. Dr. Mostafa El Shamy',
+    name_ar: 'أ.د. مصطفى الشامي',
+    specialty: 'باطنة',
+    specialty_en: 'Internal Medicine',
+    specialty_ar: 'باطنة',
+    specialties: ['باطنة'],
+    gender: 'male',
+    availability: ['today'],
+    image_url: null,
+    bio: 'فرع ههيا - استشاري باطنة.',
+    bio_en: 'Hehya branch - Internal medicine consultant.',
+    bio_ar: 'فرع ههيا - استشاري باطنة.',
+    price: 'استشارة حسب الكشف',
+    price_value: 130,
+    clinicLocation: 'عيادة باطنة - ههيا',
+    clinicLocation_en: 'Internal Medicine Clinic - Hehya',
+    clinicLocation_ar: 'عيادة باطنة - ههيا',
+    clinic_link: 'https://maps.app.goo.gl/9wgUonjix6pBc7PR9',
+    phone_number: null,
+    secret_code: 'HC-5526',
+  },
+  {
+    id: 'dr-ibrahim-lebda',
+    name: 'د. إبراهيم لبدة',
+    name_en: 'Dr. Ibrahim Lebda',
+    name_ar: 'د. إبراهيم لبدة',
+    specialty: 'مركز أشعة',
+    specialty_en: 'Radiology Center',
+    specialty_ar: 'مركز أشعة',
+    specialties: ['الآشعة التداخلية'],
+    gender: 'male',
+    availability: ['this-week'],
+    image_url: null,
+    bio: 'مركز أشعة تشخيصية وخدمات تصوير طبي.',
+    bio_en: 'Radiology center with diagnostic imaging services.',
+    bio_ar: 'مركز أشعة تشخيصية وخدمات تصوير طبي.',
+    price: 'استشارة حسب الكشف',
+    price_value: 95,
+    clinicLocation: 'مركز أشعة - ههيا',
+    clinicLocation_en: 'Radiology Center - Hehya',
+    clinicLocation_ar: 'مركز أشعة - ههيا',
+    clinic_link: 'https://maps.app.goo.gl/ktCbMDAiQ9iDBd4Z7',
+    phone_number: null,
+    secret_code: 'HC-3380',
   },
 ]
 
@@ -479,12 +844,131 @@ function updateLocalAppointmentStatus(appointmentId, status) {
   writeLocalAppointments(nextAppointments)
 }
 
+const localReviewsStorageKey = 'hihya-care-local-reviews'
+
+function readLocalReviews() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+
+  try {
+    const raw = window.localStorage.getItem(localReviewsStorageKey)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalReviews(reviews) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(localReviewsStorageKey, JSON.stringify(reviews))
+  } catch {
+    return
+  }
+}
+
+function createLocalReview({ doctorId, appointmentId, rating, comment, patientName }) {
+  return {
+    id: `local-review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    doctor_id: doctorId,
+    appointment_id: appointmentId,
+    rating,
+    comment: comment || null,
+    patient_name: patientName || null,
+    created_at: new Date().toISOString(),
+    source: 'local',
+  }
+}
+
+function saveLocalReview(review) {
+  const currentReviews = readLocalReviews()
+  const nextReviews = [...currentReviews.filter(item => item.id !== review.id), review]
+  writeLocalReviews(nextReviews)
+  return review
+}
+
+function getLocalReviewsForDoctor(doctorId) {
+  return readLocalReviews().filter(review => String(review.doctor_id) === String(doctorId))
+}
+
+function getLocalAppointmentById(appointmentId) {
+  return readLocalAppointments().find(appointment => String(appointment.id) === String(appointmentId))
+}
+
 const avatarGradients = [
   'from-cyan-400/30 via-sky-500/20 to-emerald-400/25',
   'from-indigo-400/30 via-cyan-500/20 to-sky-400/25',
   'from-emerald-400/30 via-cyan-400/20 to-teal-400/25',
   'from-sky-400/30 via-indigo-500/20 to-cyan-400/25',
 ]
+
+const doctorCardTones = [
+  {
+    keys: ['جلدية', 'تجميل', 'ليزر'],
+    surface: 'from-fuchsia-500/15 via-rose-500/10 to-amber-400/15',
+    badge: 'border-fuchsia-300/30 bg-fuchsia-400/10 text-fuchsia-700 dark:text-fuchsia-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(236,72,153,0.25)]',
+    avatar: 'from-fuchsia-500/45 via-rose-500/30 to-amber-500/35',
+  },
+  {
+    keys: ['قلب'],
+    surface: 'from-rose-500/15 via-red-500/10 to-amber-400/15',
+    badge: 'border-rose-300/30 bg-rose-400/10 text-rose-700 dark:text-rose-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(244,63,94,0.25)]',
+    avatar: 'from-rose-500/45 via-red-500/30 to-amber-500/35',
+  },
+  {
+    keys: ['عظام'],
+    surface: 'from-emerald-500/15 via-teal-500/10 to-cyan-400/15',
+    badge: 'border-emerald-300/30 bg-emerald-400/10 text-emerald-700 dark:text-emerald-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(16,185,129,0.25)]',
+    avatar: 'from-emerald-500/45 via-teal-500/30 to-cyan-500/35',
+  },
+  {
+    keys: ['مخ', 'اعصاب', 'أعصاب'],
+    surface: 'from-indigo-500/15 via-sky-500/10 to-cyan-400/15',
+    badge: 'border-indigo-300/30 bg-indigo-400/10 text-indigo-700 dark:text-indigo-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(99,102,241,0.25)]',
+    avatar: 'from-indigo-500/45 via-sky-500/30 to-cyan-500/35',
+  },
+  {
+    keys: ['باطنة', 'صدرية'],
+    surface: 'from-amber-500/15 via-yellow-500/10 to-orange-400/15',
+    badge: 'border-amber-300/30 bg-amber-400/10 text-amber-700 dark:text-amber-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(245,158,11,0.25)]',
+    avatar: 'from-amber-500/45 via-yellow-500/30 to-orange-500/35',
+  },
+  {
+    keys: ['مسالك', 'ذكورة'],
+    surface: 'from-cyan-500/15 via-sky-500/10 to-emerald-400/15',
+    badge: 'border-cyan-300/30 bg-cyan-400/10 text-cyan-700 dark:text-cyan-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(34,211,238,0.25)]',
+    avatar: 'from-cyan-500/45 via-sky-500/30 to-emerald-500/35',
+  },
+  {
+    keys: ['أشعة', 'الآشعة'],
+    surface: 'from-slate-500/15 via-zinc-500/10 to-sky-400/15',
+    badge: 'border-slate-300/30 bg-slate-400/10 text-slate-700 dark:text-slate-100',
+    glow: 'hover:shadow-[0_0_80px_rgba(148,163,184,0.25)]',
+    avatar: 'from-slate-500/45 via-zinc-500/30 to-sky-500/35',
+  },
+]
+
+function getDoctorTone(specialty) {
+  const normalized = String(specialty || '')
+  const match = doctorCardTones.find(tone => tone.keys.some(key => normalized.includes(key)))
+  return match || {
+    surface: 'from-cyan-400/12 via-slate-900/10 to-emerald-400/12',
+    badge: 'border-cyan-300/20 bg-cyan-400/10 text-cyan-700 dark:text-cyan-100',
+    glow: 'hover:shadow-[0_0_70px_rgba(34,211,238,0.2)]',
+    avatar: avatarGradients[0],
+  }
+}
 
 const specialtyMap = {
   en: {
@@ -556,6 +1040,10 @@ function makeDoctorFromRow(row) {
     specialty: row.specialty || 'Specialist',
     specialty_en: row.specialty_en ?? null,
     specialty_ar: row.specialty_ar ?? null,
+    specialties: Array.isArray(row.specialties) ? row.specialties : row.specialties ? [row.specialties] : null,
+    gender: row.gender ?? null,
+    availability: Array.isArray(row.availability) ? row.availability : row.availability ? [row.availability] : null,
+    price_value: row.price_value ?? null,
     image_url: row.image_url ?? null,
     bio: row.bio ?? null,
     bio_en: row.bio_en ?? null,
@@ -708,6 +1196,32 @@ function formatAppointmentDate(appointment, language) {
   })
 }
 
+function formatTimeAgo(value, language) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const now = new Date()
+  const diffSeconds = Math.round((date.getTime() - now.getTime()) / 1000)
+  const absSeconds = Math.abs(diffSeconds)
+  const rtf = new Intl.RelativeTimeFormat(language === 'ar' ? 'ar' : 'en', { numeric: 'auto' })
+
+  const thresholds = [
+    { unit: 'year', seconds: 60 * 60 * 24 * 365 },
+    { unit: 'month', seconds: 60 * 60 * 24 * 30 },
+    { unit: 'week', seconds: 60 * 60 * 24 * 7 },
+    { unit: 'day', seconds: 60 * 60 * 24 },
+    { unit: 'hour', seconds: 60 * 60 },
+    { unit: 'minute', seconds: 60 },
+    { unit: 'second', seconds: 1 },
+  ]
+
+  const match = thresholds.find(item => absSeconds >= item.seconds) || thresholds[thresholds.length - 1]
+  const valueForUnit = Math.round(diffSeconds / match.seconds)
+  return rtf.format(valueForUnit, match.unit)
+}
+
 function toDatetimeLocalValue(appointmentDate) {
   if (!appointmentDate) {
     return ''
@@ -795,6 +1309,23 @@ function buildAnalyticsSummary(appointments, doctor, language) {
     monthSeries,
     weekdayCounts,
     statusBreakdown,
+  }
+}
+
+function buildReviewSummary(reviews) {
+  const sanitized = reviews.filter(review => Number.isFinite(review.rating))
+  const total = sanitized.length
+  const average = total ? sanitized.reduce((sum, review) => sum + review.rating, 0) / total : 0
+
+  const distribution = [5, 4, 3, 2, 1].map(star => ({
+    star: String(star),
+    count: sanitized.filter(review => review.rating === star).length,
+  }))
+
+  return {
+    total,
+    average,
+    distribution,
   }
 }
 
@@ -978,6 +1509,7 @@ function App() {
           <Route path="/doctor/:doctorId" element={<DoctorProfilePage loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
           <Route path="/book/:doctorId" element={<BookingPage doctorLookup={doctorLookup} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
           <Route path="/dashboard" element={<DashboardAccessPage ui={ui} />} />
+          <Route path="/review/:appointmentId" element={<ReviewPage ui={ui} />} />
           <Route path="/dashboard/:doctorId" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -994,6 +1526,29 @@ function AppShell({ children, ui }) {
 
   return (
     <main className={`relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 ${themePulse ? 'theme-fade' : ''}`}>
+      <style>{`
+        @keyframes shimmerText {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes cardSweep {
+          0% { transform: translateX(-120%); opacity: 0; }
+          20% { opacity: 0.6; }
+          100% { transform: translateX(120%); opacity: 0; }
+        }
+        @keyframes floatSoft {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        .shimmer-text {
+          background: linear-gradient(90deg, currentColor 0%, rgba(255,255,255,0.35) 50%, currentColor 100%);
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: shimmerText 3s linear infinite;
+        }
+      `}</style>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.08),_transparent_32%)] dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.22),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.16),_transparent_32%),linear-gradient(180deg,_rgba(2,6,23,0.96),_rgba(2,6,23,1))]" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:64px_64px] opacity-20 [mask-image:radial-gradient(circle_at_center,black,transparent_82%)] dark:bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)]" />
       <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-400/20" />
@@ -1013,6 +1568,30 @@ function AppShell({ children, ui }) {
             </Link>
 
             <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                    language === 'en'
+                      ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
+                      : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('ar')}
+                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                    language === 'ar'
+                      ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
+                      : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
+                  }`}
+                >
+                  AR
+                </button>
+              </div>
               <div className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:flex">
                 <span className="px-1.5 text-[9px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('language')}</span>
                 <button
@@ -1111,8 +1690,8 @@ function AppShell({ children, ui }) {
                 >
                   <Mail size={15} />
                   <span className="flex flex-col text-center leading-4 sm:text-start sm:leading-tight">
-                    <span>{isArabic ? 'إيميل' : 'Email'};</span>
-                    <span className="text-[10px] font-normal opacity-75">mohammed.abdelkarim2025@gmail.com</span>
+                    <span>{isArabic ? 'إيميل' : 'Email'}</span>
+                    <span className="text-[10px] font-normal opacity-75 break-all sm:break-normal">mohammed.abdelkarim2025@gmail.com</span>
                   </span>
                 </a>
                 <a
@@ -1135,52 +1714,135 @@ function AppShell({ children, ui }) {
 }
 
 function DoctorCard({ doctor, index, ui }) {
-  const avatarGradient = avatarGradients[index % avatarGradients.length]
   const t = key => getText(ui.language, key)
   const localizedDoctor = localizeDoctor(ui.language, doctor)
+  const tone = getDoctorTone(localizedDoctor?.specialty)
+  const avatarGradient = tone.avatar || avatarGradients[index % avatarGradients.length]
+  const isAfandy = /أفندي|Afandy/i.test(localizedDoctor?.name || '')
+  const availability = Array.isArray(doctor?.availability) ? doctor.availability : []
+  const ratingValue = Number(doctor?.rating ?? 4.8)
+  const reviewsCount = Number(doctor?.reviews_count ?? 120)
+  const waitMinutes = Number(doctor?.wait_minutes ?? 24)
+  const paymentLabel = ui.language === 'ar'
+    ? (doctor?.payment_method || 'كاش')
+    : (doctor?.payment_method_en || doctor?.payment_method || 'Cash')
+  const specialtiesList = Array.isArray(doctor?.specialties) ? doctor.specialties.slice(0, 3) : []
+  const availabilityLabel = availability.includes('today')
+    ? (ui.language === 'ar' ? 'متاح اليوم' : 'Available today')
+    : availability.includes('tomorrow')
+      ? (ui.language === 'ar' ? 'متاح غداً' : 'Available tomorrow')
+      : availability.includes('this-week')
+        ? (ui.language === 'ar' ? 'متاح هذا الأسبوع' : 'Available this week')
+        : (ui.language === 'ar' ? 'حجز مرن' : 'Flexible booking')
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-[0_0_120px_rgba(34,211,238,0.16)] dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-[0_0_80px_rgba(34,211,238,0.08)] sm:p-5">
-      <div className={`mx-auto flex aspect-square h-24 w-24 items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-gradient-to-br ${avatarGradient} shadow-inner dark:border-white/10 sm:mx-0 sm:h-20 sm:w-20`}>
-        {localizedDoctor.image_url ? (
-          <img src={localizedDoctor.image_url} alt={localizedDoctor.name} className="h-full w-full object-cover" />
-        ) : (
-          <svg viewBox="0 0 24 24" className="h-9 w-9 text-white/90" fill="none" aria-hidden="true">
-            <path
-              d="M12 12.4C14.2091 12.4 16 10.6091 16 8.4C16 6.19086 14.2091 4.4 12 4.4C9.79086 4.4 8 6.19086 8 8.4C8 10.6091 9.79086 12.4 12 12.4Z"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            />
-            <path
-              d="M4.8 19.2C5.9 15.9 8.6 14.2 12 14.2C15.4 14.2 18.1 15.9 19.2 19.2"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
-        )}
+    <article className={`group relative flex h-full flex-col overflow-hidden rounded-[1.6rem] border border-white/30 bg-gradient-to-br ${tone.surface} p-3 shadow-[0_14px_45px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-500 hover:-translate-y-1 hover:border-white/40 ${tone.glow} dark:border-white/10 dark:bg-white/5 sm:p-4`}>
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-700 group-hover:opacity-100">
+        <div className="absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent blur-md animate-[cardSweep_3.6s_linear_infinite]" />
+      </div>
+      <div className="absolute -top-10 left-6 h-16 w-16 rounded-full bg-white/20 blur-2xl" />
+      <div className="absolute -bottom-12 right-6 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+
+      <div className="relative flex items-center gap-3">
+        <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-[1.2rem] border border-white/30 bg-gradient-to-br ${avatarGradient} shadow-inner dark:border-white/10`}>
+          {localizedDoctor.image_url ? (
+            <img src={localizedDoctor.image_url} alt={localizedDoctor.name} className="h-full w-full object-cover" />
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-7 w-7 text-white/90" fill="none" aria-hidden="true">
+              <path
+                d="M12 12.4C14.2091 12.4 16 10.6091 16 8.4C16 6.19086 14.2091 4.4 12 4.4C9.79086 4.4 8 6.19086 8 8.4C8 10.6091 9.79086 12.4 12 12.4Z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+              <path
+                d="M4.8 19.2C5.9 15.9 8.6 14.2 12 14.2C15.4 14.2 18.1 15.9 19.2 19.2"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          )}
+        </div>
+        <div className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] ${tone.badge}`}>
+          {availabilityLabel}
+        </div>
       </div>
 
-      <div className={`absolute top-4 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-700 dark:text-cyan-100 ${ui.language === 'ar' ? 'left-4' : 'right-4'}`}>
-        {ui.language === 'ar' ? 'مميز للحجز' : 'Featured for booking'}
+      <div className="relative mt-3">
+        <p className="text-[10px] uppercase tracking-[0.34em] text-slate-600 dark:text-slate-300">{t('doctorCardTitle')}</p>
+        <h3 className={`mt-1 text-base font-semibold tracking-[-0.03em] text-slate-900 dark:text-white ${isAfandy ? 'shimmer-text' : ''}`}>
+          {localizedDoctor.name}
+        </h3>
+        <p className="mt-1 text-xs text-slate-700/80 dark:text-slate-200/80">{localizedDoctor.specialty}</p>
       </div>
 
-      <div className="mt-5 text-center sm:text-start">
-        <p className="text-xs uppercase tracking-[0.38em] text-cyan-700/70 dark:text-cyan-200/70">{t('doctorCardTitle')}</p>
-        <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-slate-900 dark:text-white sm:text-xl">{localizedDoctor.name}</h3>
-        <p className="mt-1 text-sm text-cyan-700/80 dark:text-cyan-100/80">{localizedDoctor.specialty}</p>
+      <div className="mt-3 rounded-2xl border border-white/40 bg-white/60 px-3 py-2 text-[11px] leading-5 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+        <p className="line-clamp-2">{localizedDoctor.bio || t('doctorFallbackBio')}</p>
+        {localizedDoctor.clinicLocation ? (
+          <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-300">{localizedDoctor.clinicLocation}</p>
+        ) : null}
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid gap-2 text-[11px] text-slate-600 dark:text-slate-200">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-amber-400" fill="currentColor" />
+          <span className="font-semibold text-slate-800 dark:text-white">{ratingValue.toFixed(1)}</span>
+          <span className="text-[10px] text-slate-500 dark:text-slate-300">
+            {ui.language === 'ar' ? `(${reviewsCount} تقييم)` : `(${reviewsCount} reviews)`}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-emerald-500" />
+            <span>{ui.language === 'ar' ? 'الانتظار' : 'Wait'}</span>
+          </span>
+          <span className="font-semibold text-emerald-700 dark:text-emerald-100">{ui.language === 'ar' ? `${waitMinutes} دقيقة` : `${waitMinutes} min`}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-cyan-500" />
+            <span>{ui.language === 'ar' ? 'الموقع' : 'Location'}</span>
+          </span>
+          <span className="max-w-[9rem] truncate text-[10px] font-semibold text-slate-700 dark:text-slate-100">
+            {localizedDoctor.clinicLocation || '--'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-sky-500" />
+            <span>{ui.language === 'ar' ? 'الدفع' : 'Payment'}</span>
+          </span>
+          <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-100">{paymentLabel}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.25em] text-slate-400">
+        <span className="rounded-full border border-white/40 bg-white/70 px-2.5 py-1 font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+          {localizedDoctor.price}
+        </span>
+        <span className="rounded-full border border-white/40 bg-white/70 px-2.5 py-1 font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+          {localizedDoctor.phone_number ? t('doctorWhatsAppReady') : t('doctorNoPhone')}
+        </span>
+        {specialtiesList.map(item => (
+          <span
+            key={`${localizedDoctor.id}-spec-${item}`}
+            className="rounded-full border border-white/30 bg-white/50 px-2.5 py-1 text-[9px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+
+      <div className="relative mt-4 grid grid-cols-2 gap-2">
         <Link
           to={`/dashboard?doctor=${localizedDoctor.id}`}
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-white/30 bg-white/50 px-2.5 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
         >
           {ui.language === 'ar' ? 'فتح اللوحة' : 'Open Dashboard'}
         </Link>
         <Link
           to={`/doctor/${localizedDoctor.id}`}
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/20 via-sky-500/20 to-emerald-400/20 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:-translate-y-0.5 hover:bg-cyan-400/25 dark:text-cyan-100"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-white/40 bg-white/70 px-2.5 py-2 text-[11px] font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-white/90 dark:border-white/10 dark:bg-white/10 dark:text-white"
         >
           {t('doctorViewProfile')}
         </Link>
@@ -1189,8 +1851,113 @@ function DoctorCard({ doctor, index, ui }) {
   )
 }
 
+function DoctorAvailabilityItem({ doctor, ui, labels }) {
+  const t = key => getText(ui.language, key)
+  const navigate = useNavigate()
+  const { reviews, loading: reviewsLoading } = useReviewsByDoctorId(doctor?.id, ui.language)
+  const reviewSummary = useMemo(() => buildReviewSummary(reviews), [reviews])
+  const ratingValue = reviewSummary.total ? reviewSummary.average : null
+  const ratingCountLabel = reviewsLoading
+    ? t('reviewLoading')
+    : reviewSummary.total
+      ? t('availabilityRatingCount', reviewSummary.total)
+      : t('availabilityRatingEmpty')
+  const waitValue = t('availabilityWaitValue', 24)
+
+  if (!doctor) {
+    return null
+  }
+
+  const handleBookSlot = slotDate => {
+    navigate(`/book/${doctor.id}?slot=${encodeURIComponent(slotDate.toISOString())}`)
+  }
+
+  const handleBookDoctor = () => {
+    navigate(`/book/${doctor.id}`)
+  }
+
+  const handleViewProfile = () => {
+    navigate(`/doctor/${doctor.id}`)
+  }
+
+  return (
+    <DoctorAvailabilityShowcase
+      doctor={doctor}
+      onBookSlot={handleBookSlot}
+      onBookDoctor={handleBookDoctor}
+      onViewProfile={handleViewProfile}
+      labels={labels}
+      language={ui.language}
+      ratingValue={ratingValue}
+      ratingCountLabel={ratingCountLabel}
+      waitValue={waitValue}
+    />
+  )
+}
+
 function HomePage({ doctors, loading, notice, ui }) {
   const t = key => getText(ui.language, key)
+  const isArabic = ui.language === 'ar'
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedSpecialty, setSelectedSpecialty] = useState('')
+  const [genderFilter, setGenderFilter] = useState('all')
+  const [availabilityFilter, setAvailabilityFilter] = useState('all')
+  const [priceFilter, setPriceFilter] = useState('all')
+
+  const specialtyGroups = useMemo(
+    () => ({
+      popular: ['جلدية', 'اسنان', 'نفسي', 'اطفال وحديثي الولادة', 'مخ واعصاب', 'عظام', 'نساء وتوليد', 'انف واذن وحنجرة', 'قلب واوعية دموية'],
+      other: ['الآشعة التداخلية', 'امراض دم', 'اورام', 'باطنة', 'تخسيس وتغذية', 'جراحة اطفال', 'جراحة أورام', 'جراحة اوعية دموية', 'جراحة تجميل'],
+    }),
+    [],
+  )
+
+  const filteredDoctors = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+
+    return doctors.filter(doctor => {
+      const nameValues = [doctor.name, doctor.name_en, doctor.name_ar]
+        .filter(Boolean)
+        .map(value => String(value).toLowerCase())
+      const matchesSearch = !query || nameValues.some(value => value.includes(query))
+
+      const doctorSpecialties = Array.isArray(doctor.specialties)
+        ? doctor.specialties
+        : doctor.specialty
+          ? [doctor.specialty]
+          : []
+      const matchesSpecialty = !selectedSpecialty || doctorSpecialties.some(spec => String(spec).includes(selectedSpecialty))
+
+      const matchesGender = genderFilter === 'all' || doctor.gender === genderFilter
+
+      const availability = Array.isArray(doctor.availability) ? doctor.availability : []
+      const matchesAvailability = availabilityFilter === 'all' || availability.includes(availabilityFilter)
+
+      const priceValue = Number(doctor.price_value ?? parsePriceValue(doctor.price))
+      const matchesPrice = priceFilter === 'all'
+        || (priceFilter === 'lt50' && priceValue > 0 && priceValue < 50)
+        || (priceFilter === '50-100' && priceValue >= 50 && priceValue <= 100)
+        || (priceFilter === 'gt100' && priceValue > 100)
+
+      return matchesSearch && matchesSpecialty && matchesGender && matchesAvailability && matchesPrice
+    })
+  }, [doctors, searchTerm, selectedSpecialty, genderFilter, availabilityFilter, priceFilter])
+
+  const localizedDoctors = useMemo(
+    () => filteredDoctors.map(doctor => localizeDoctor(ui.language, doctor)),
+    [filteredDoctors, ui.language],
+  )
+
+  const gridVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: 'easeOut' } },
+    exit: { opacity: 0, y: -12, scale: 0.98, transition: { duration: 0.25, ease: 'easeIn' } },
+  }
 
   return (
     <AppShell ui={ui}>
@@ -1200,9 +1967,11 @@ function HomePage({ doctors, loading, notice, ui }) {
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-slate-900 dark:text-white sm:text-5xl">
             {t('homeTitle')}
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">
-            {t('homeDescription')}
-          </p>
+          {t('homeDescription') ? (
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">
+              {t('homeDescription')}
+            </p>
+          ) : null}
         </div>
 
         {loading ? (
@@ -1215,11 +1984,213 @@ function HomePage({ doctors, loading, notice, ui }) {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {doctors.map((doctor, index) => (
-            <DoctorCard key={doctor.id} doctor={doctor} index={index} ui={ui} />
-          ))}
-        </div>
+        {!loading ? (
+          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <aside className="rounded-[1.6rem] border border-slate-200 bg-white/85 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'النوع' : 'Gender'}
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'all', label: isArabic ? 'الكل' : 'All' },
+                      { value: 'female', label: isArabic ? 'دكتورة' : 'Female' },
+                      { value: 'male', label: isArabic ? 'دكتور' : 'Male' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setGenderFilter(option.value)}
+                        className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+                          genderFilter === option.value
+                            ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-800 dark:text-cyan-100'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'المواعيد المتاحة' : 'Availability'}
+                  </p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'all', label: isArabic ? 'الكل' : 'All' },
+                      { value: 'today', label: isArabic ? 'اليوم' : 'Today' },
+                      { value: 'tomorrow', label: isArabic ? 'غداً' : 'Tomorrow' },
+                      { value: 'this-week', label: isArabic ? 'هذا الأسبوع' : 'This week' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setAvailabilityFilter(option.value)}
+                        className={`rounded-2xl border px-3 py-2 text-[11px] font-semibold transition ${
+                          availabilityFilter === option.value
+                            ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-800 dark:text-emerald-100'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'سعر الكشف' : 'Consultation fee'}
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'all', label: isArabic ? 'الكل' : 'All' },
+                      { value: 'lt50', label: isArabic ? 'أقل من 50' : '< 50' },
+                      { value: '50-100', label: isArabic ? '50 - 100' : '50 - 100' },
+                      { value: 'gt100', label: isArabic ? 'أكثر من 100' : '> 100' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setPriceFilter(option.value)}
+                        className={`rounded-2xl border px-3 py-2 text-[11px] font-semibold transition ${
+                          priceFilter === option.value
+                            ? 'border-sky-300/40 bg-sky-400/15 text-sky-800 dark:text-sky-100'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setSelectedSpecialty('')
+                    setGenderFilter('all')
+                    setAvailabilityFilter('all')
+                    setPriceFilter('all')
+                  }}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                >
+                  {isArabic ? 'مسح الفلاتر' : 'Clear filters'}
+                </button>
+              </div>
+            </aside>
+
+            <div>
+              <div className="mb-4 grid gap-3 rounded-[1.4rem] border border-slate-200 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:grid-cols-[1fr_260px]">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'أبحث عن دكتور' : 'Search'}
+                  </p>
+                  <input
+                    value={searchTerm}
+                    onChange={event => setSearchTerm(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                    placeholder={isArabic ? 'أنا ابحث عن دكتور' : 'Search for a doctor'}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'اختار التخصص' : 'Select specialty'}
+                  </p>
+                  <select
+                    value={selectedSpecialty}
+                    onChange={event => setSelectedSpecialty(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                  >
+                    <option value="">{isArabic ? 'كل التخصصات' : 'All specialties'}</option>
+                    <optgroup label={isArabic ? 'الأكثر اختيارا' : 'Most selected'}>
+                      {specialtyGroups.popular.map(item => (
+                        <option key={`popular-${item}`} value={item}>{item}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label={isArabic ? 'تخصصات أخرى' : 'Other specialties'}>
+                      {specialtyGroups.other.map(item => (
+                        <option key={`other-${item}`} value={item}>{item}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+              <div className="mb-4 rounded-[1.4rem] border border-slate-200 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'الأكثر اختيارا' : 'Most selected'}
+                  </p>
+                  {selectedSpecialty ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSpecialty('')}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+                    >
+                      {isArabic ? 'إزالة' : 'Clear'}
+                    </button>
+                  ) : null}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {specialtyGroups.popular.map(item => {
+                    const isActive = selectedSpecialty === item
+                    return (
+                      <button
+                        key={`badge-${item}`}
+                        type="button"
+                        onClick={() => setSelectedSpecialty(item)}
+                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                          isActive
+                            ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-800 dark:text-cyan-100'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                  {isArabic ? 'نتائج البحث' : 'Results'}
+                </p>
+                <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                  {isArabic ? `عدد النتائج: ${localizedDoctors.length}` : `Results: ${localizedDoctors.length}`}
+                </div>
+              </div>
+
+              {localizedDoctors.length ? (
+                <AnimatePresence mode="popLayout">
+                  <motion.div
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                    variants={gridVariants}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {localizedDoctors.map((doctor, index) => (
+                      <motion.div
+                        key={doctor.id}
+                        variants={itemVariants}
+                        layout
+                      >
+                        <DoctorCard doctor={doctor} index={index} ui={ui} />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  {isArabic ? 'لا توجد نتائج مطابقة للفلترة الحالية.' : 'No results match the current filters.'}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
       </section>
     </AppShell>
   )
@@ -1342,6 +2313,8 @@ function DoctorProfilePage({ loading, notice, ui }) {
   const { doctorId } = useParams()
   const navigate = useNavigate()
   const { doctor, loading: doctorLoading, notice: doctorNotice } = useDoctorById(doctorId, ui.language)
+  const { reviews, loading: reviewsLoading } = useReviewsByDoctorId(doctor?.id, ui.language)
+  const reviewSummary = useMemo(() => buildReviewSummary(reviews), [reviews])
   const clinicMapHref = doctor?.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9'
 
   if (!doctor) {
@@ -1447,6 +2420,22 @@ function DoctorProfilePage({ loading, notice, ui }) {
             <p className="mt-1 text-lg text-cyan-800 dark:text-cyan-100">{doctor.clinicLocation || (ui.language === 'ar' ? 'الجناح الرئيسي - هيهيا كير' : 'Hihya Care main wing')}</p>
             <p className="mt-6 text-sm text-slate-600 dark:text-slate-300">{t('consultationFee')}</p>
             <p className="mt-1 text-lg text-emerald-700 dark:text-emerald-100">{doctor.price}</p>
+            <p className="mt-6 text-sm text-slate-600 dark:text-slate-300">{t('reviewProfileLabel')}</p>
+            {reviewsLoading ? (
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('reviewLoading')}</p>
+            ) : reviewSummary.total ? (
+              <div className="mt-1 flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" fill="currentColor" />
+                <span className="text-lg font-semibold text-amber-700 dark:text-amber-100">
+                  {reviewSummary.average.toFixed(1)} / 5
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  ({reviewSummary.total})
+                </span>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('reviewEmpty')}</p>
+            )}
             <p className="mt-6 text-sm text-slate-600 dark:text-slate-300">{t('whatsapp')}</p>
             <p className="mt-1 text-lg text-cyan-800 dark:text-cyan-100">
               {doctor.phone_number ? `wa.me/${normalizePhoneForWa(doctor.phone_number)}` : (ui.language === 'ar' ? 'غير مكوّن' : 'Not configured')}
@@ -1533,17 +2522,145 @@ function useAppointmentsByDoctorId(doctorId, language) {
   }
 }
 
+function useReviewsByDoctorId(doctorId, language) {
+  const reviewsQuery = useQuery({
+    queryKey: ['reviews', doctorId, language],
+    enabled: Boolean(doctorId),
+    queryFn: async () => {
+      if (!doctorId) {
+        return { reviews: [], notice: '' }
+      }
+
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, rating, comment, created_at, appointment_id, doctor_id, patient_id')
+        .eq('doctor_id', doctorId)
+        .order('created_at', { ascending: false })
+
+      if (error || !Array.isArray(data)) {
+        return {
+          reviews: getLocalReviewsForDoctor(doctorId),
+          notice: getText(language, 'reviewFallbackNotice'),
+        }
+      }
+
+      const remoteReviews = data.map((review, index) => ({
+        id: review.id ?? `review-${doctorId}-${index}`,
+        rating: Number(review.rating) || 0,
+        comment: review.comment ?? null,
+        created_at: review.created_at ?? new Date().toISOString(),
+        appointment_id: review.appointment_id ?? null,
+        doctor_id: review.doctor_id ?? doctorId,
+        patient_id: review.patient_id ?? null,
+        patient_name: review.patient_name ?? null,
+      }))
+
+      const localReviews = getLocalReviewsForDoctor(doctorId)
+      const mergedReviews = [...remoteReviews]
+      const existingIds = new Set(remoteReviews.map(review => review.id))
+      mergedReviews.push(...localReviews.filter(review => !existingIds.has(review.id)))
+
+      mergedReviews.sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+
+      return {
+        reviews: mergedReviews,
+        notice: '',
+      }
+    },
+    staleTime: 15_000,
+    refetchInterval: 20_000,
+  })
+
+  return {
+    reviews: reviewsQuery.data?.reviews || [],
+    loading: reviewsQuery.isLoading,
+    notice: reviewsQuery.data?.notice || '',
+  }
+}
+
+function useAppointmentById(appointmentId, language) {
+  const [appointment, setAppointment] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    let active = true
+
+    const loadAppointment = async () => {
+      if (!appointmentId) {
+        setAppointment(null)
+        setLoading(false)
+        setNotice('')
+        return
+      }
+
+      setLoading(true)
+      setNotice('')
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id, patient_name, phone, appointment_date, time, status, doctor_id')
+        .eq('id', appointmentId)
+        .maybeSingle()
+
+      if (!active) {
+        return
+      }
+
+      if (error || !data) {
+        const localAppointment = getLocalAppointmentById(appointmentId)
+        if (localAppointment) {
+          setAppointment(localAppointment)
+        } else {
+          setAppointment(null)
+          setNotice(error?.message || getText(language, 'reviewNotFound'))
+        }
+      } else {
+        setAppointment({
+          ...data,
+          appointment_date: data.appointment_date || data.time || new Date().toISOString(),
+          status: data.status || 'Pending',
+        })
+      }
+
+      setLoading(false)
+    }
+
+    loadAppointment()
+
+    return () => {
+      active = false
+    }
+  }, [appointmentId, language])
+
+  return { appointment, loading, notice }
+}
+
 function BookingPage({ doctorLookup, loading, notice, ui }) {
   const t = key => getText(ui.language, key)
   const { doctorId } = useParams()
+  const location = useLocation()
+  const slotParam = useMemo(() => new URLSearchParams(location.search).get('slot'), [location.search])
   const navigate = useNavigate()
   const queryCache = useQueryClient()
   const [patientName, setPatientName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
-  const [appointmentDate, setAppointmentDate] = useState(() => toDatetimeLocalValue(new Date()))
+  const [appointmentDate, setAppointmentDate] = useState(() => {
+    if (!slotParam) {
+      return toDatetimeLocalValue(new Date())
+    }
+
+    const parsedDate = new Date(slotParam)
+    if (Number.isNaN(parsedDate.getTime())) {
+      return toDatetimeLocalValue(new Date())
+    }
+
+    return toDatetimeLocalValue(parsedDate)
+  })
   const [status, setStatus] = useState('idle')
   const [feedback, setFeedback] = useState('')
   const [toast, setToast] = useState(null)
+  const [session, setSession] = useState(null)
 
   const doctor = doctorId ? doctorLookup.get(doctorId) : null
   const selectedDoctor = doctor ? localizeDoctor(ui.language, doctor) : (doctorId ? localizeDoctor(ui.language, createFallbackDoctor(doctorId)) : null)
@@ -1562,6 +2679,45 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
     const timeoutId = window.setTimeout(() => setToast(null), 4200)
     return () => window.clearTimeout(timeoutId)
   }, [toast])
+
+  useEffect(() => {
+    if (!slotParam) {
+      return
+    }
+
+    const parsedDate = new Date(slotParam)
+    if (Number.isNaN(parsedDate.getTime())) {
+      return
+    }
+
+    setAppointmentDate(toDatetimeLocalValue(parsedDate))
+  }, [slotParam])
+
+  useEffect(() => {
+    let active = true
+
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (active) {
+        setSession(data?.session || null)
+      }
+    }
+
+    loadSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) {
+        setSession(nextSession || null)
+      }
+    })
+
+    return () => {
+      active = false
+      subscription?.unsubscribe()
+    }
+  }, [])
 
   const handleSubmit = async event => {
     event.preventDefault()
@@ -1595,6 +2751,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
           patient_name: trimmedName,
           phone: trimmedPhone,
           doctor_id: doctorId,
+          patient_id: session?.user?.id ?? null,
           appointment_date: new Date(trimmedAppointmentDate).toISOString(),
           status: 'Pending',
         },
@@ -1894,6 +3051,273 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   )
 }
 
+function ReviewPage({ ui }) {
+  const t = key => getText(ui.language, key)
+  const { appointmentId } = useParams()
+  const { appointment, loading, notice } = useAppointmentById(appointmentId, ui.language)
+  const { doctor } = useDoctorById(appointment?.doctor_id, ui.language)
+  const [session, setSession] = useState(null)
+  const [authNotice, setAuthNotice] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    const loadSession = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (!active) {
+        return
+      }
+
+      if (error) {
+        setAuthNotice(error.message)
+        setSession(null)
+      } else {
+        setAuthNotice('')
+        setSession(data?.session || null)
+      }
+    }
+
+    loadSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) {
+        setSession(nextSession || null)
+      }
+    })
+
+    return () => {
+      active = false
+      subscription?.unsubscribe()
+    }
+  }, [])
+
+  const isCompleted = appointment?.status === 'Completed'
+  const isSupabaseOffline = authNotice.toLowerCase().includes('supabase is not configured')
+  const canSubmit = Boolean(session?.user) || isSupabaseOffline
+  const disabledReason = canSubmit ? '' : t('reviewAuthRequired')
+
+  const handleLogin = async event => {
+    event.preventDefault()
+
+    const email = loginEmail.trim()
+    if (!email) {
+      setAuthNotice(ui.language === 'ar' ? 'يرجى إدخال البريد الإلكتروني.' : 'Please enter an email address.')
+      return
+    }
+
+    try {
+      setLoginLoading(true)
+      setAuthNotice('')
+
+      const redirectTo = typeof window !== 'undefined' ? window.location.href : undefined
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      setAuthNotice(t('dashboardOtpSent'))
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : t('dashboardOtpError'))
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  const reviewLabels = {
+    kicker: t('reviewPatientFeedback'),
+    title: t('reviewTitle'),
+    subtitle: t('reviewSubtitle'),
+    ratingLabel: t('reviewRatingLabel'),
+    commentLabel: t('reviewCommentLabel'),
+    commentPlaceholder: t('reviewCommentPlaceholder'),
+    submitLabel: t('reviewSubmit'),
+    submittingLabel: t('reviewSubmitting'),
+    thankYouTitle: t('reviewThankYouTitle'),
+    thankYouBody: t('reviewThankYouBody'),
+    ratingRequired: t('reviewRatingRequired'),
+  }
+
+  const handleSubmitReview = async ({ rating, comment }) => {
+    if (!appointment || !doctor) {
+      throw new Error(t('reviewNotFound'))
+    }
+
+    if (!isCompleted) {
+      throw new Error(t('reviewNotReady'))
+    }
+
+    const payload = {
+      doctor_id: appointment.doctor_id,
+      appointment_id: String(appointment.id),
+      patient_id: session?.user?.id ?? null,
+      patient_name: appointment.patient_name || null,
+      rating,
+      comment: comment?.trim() || null,
+    }
+
+    const { error } = await supabase.from('reviews').insert([payload])
+
+    if (error) {
+      if (error.message.toLowerCase().includes('supabase is not configured')) {
+        saveLocalReview(
+          createLocalReview({
+            doctorId: appointment.doctor_id,
+            appointmentId: String(appointment.id),
+            rating,
+            comment: comment?.trim() || null,
+            patientName: appointment.patient_name,
+          }),
+        )
+        return { note: t('reviewSavedLocal') }
+      }
+
+      throw error
+    }
+
+    return { note: '' }
+  }
+
+  return (
+    <AppShell ui={ui}>
+      <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="rounded-[2rem] border border-slate-200 bg-white p-6 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
+          <p className="text-xs uppercase tracking-[0.45em] text-amber-600/70 dark:text-amber-200/70">
+            {t('reviewPortal')}
+          </p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-slate-900 dark:text-white">
+            {t('reviewTitle')}
+          </h1>
+          <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            {t('reviewSubtitle')}
+          </p>
+
+          {loading ? (
+            <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              {t('reviewLoading')}
+            </div>
+          ) : notice ? (
+            <div className="mt-6 rounded-3xl border border-rose-300/30 bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-100">
+              {notice}
+            </div>
+          ) : null}
+
+          {appointment ? (
+            <div className="mt-6 space-y-4">
+              <div className="rounded-3xl border border-cyan-300/20 bg-slate-50 p-5 dark:border-cyan-300/20 dark:bg-slate-950/60">
+                <p className="text-xs uppercase tracking-[0.32em] text-cyan-700/70 dark:text-cyan-200/70">
+                  {t('reviewAppointmentLabel')}
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+                  {appointment.patient_name || t('reviewPatientFallback')}
+                </p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  {formatAppointmentDate(appointment, ui.language)}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+                    {t('reviewLockedCaption')}
+                  </span>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass(appointment.status)}`}>
+                    {localizeAppointmentStatus(ui.language, appointment.status)}
+                  </span>
+                </div>
+              </div>
+
+              {doctor ? (
+                <div className="rounded-3xl border border-emerald-300/20 bg-emerald-50/60 p-5 dark:border-emerald-300/20 dark:bg-emerald-400/5">
+                  <p className="text-xs uppercase tracking-[0.32em] text-emerald-700/70 dark:text-emerald-200/70">
+                    {t('reviewDoctorLabel')}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">{doctor.name}</p>
+                  <p className="mt-1 text-sm text-emerald-700/80 dark:text-emerald-200/80">{doctor.specialty}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="mt-6 rounded-[1.6rem] border border-slate-200 bg-white/70 p-5 dark:border-white/10 dark:bg-white/5">
+            <p className="text-xs uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
+              {ui.language === 'ar' ? 'تسجيل الدخول' : 'Sign in'}
+            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {ui.language === 'ar'
+                ? 'تحتاج جلسة Supabase نشطة لحفظ التقييم بشكل رسمي.'
+                : 'An active Supabase session is required to store reviews securely.'}
+            </p>
+            {session ? (
+              <div className="mt-4 rounded-2xl border border-emerald-300/30 bg-emerald-50 p-4 text-xs text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-100">
+                {t('dashboardSessionActive')}
+              </div>
+            ) : (
+              <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={handleLogin}>
+                <input
+                  className="w-full flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-amber-300 focus:ring-2 focus:ring-amber-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                  value={loginEmail}
+                  onChange={event => setLoginEmail(event.target.value)}
+                  placeholder={t('dashboardEmailPlaceholder')}
+                  autoComplete="email"
+                  inputMode="email"
+                />
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="rounded-2xl bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 px-4 py-3 text-sm font-semibold text-amber-950 shadow-[0_10px_26px_rgba(251,191,36,0.3)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {loginLoading ? t('reviewSubmitting') : t('sendMagicLink')}
+                </button>
+              </form>
+            )}
+            {authNotice ? (
+              <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-50 p-4 text-xs text-amber-700 dark:bg-amber-400/10 dark:text-amber-100">
+                {authNotice}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {appointment && isCompleted ? (
+          <ReviewFeedbackCard
+            doctorName={doctor?.name}
+            doctorSpecialty={doctor?.specialty}
+            onSubmit={handleSubmitReview}
+            strings={reviewLabels}
+            disabledReason={disabledReason}
+          />
+        ) : appointment ? (
+          <div className="rounded-[2rem] border border-amber-200/30 bg-amber-50/70 p-6 text-slate-700 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-slate-100">
+            <p className="text-xs uppercase tracking-[0.35em] text-amber-700/70 dark:text-amber-200/70">
+              {t('reviewLockedTitle')}
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">
+              {t('reviewNotReady')}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {t('reviewLockedBody')}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-[2rem] border border-rose-300/30 bg-rose-50/70 p-6 text-rose-700 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:bg-rose-500/10 dark:text-rose-100">
+            <p className="text-xs uppercase tracking-[0.35em] text-rose-600/70 dark:text-rose-200/70">
+              {t('reviewNotFound')}
+            </p>
+            <p className="mt-3 text-sm leading-6">
+              {t('reviewLockedBody')}
+            </p>
+          </div>
+        )}
+      </section>
+    </AppShell>
+  )
+}
+
 function DashboardAccessPage({ ui }) {
   const t = key => getText(ui.language, key)
   const navigate = useNavigate()
@@ -2170,6 +3594,19 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
   const t = key => getText(ui.language, key)
   const isArabic = ui.language === 'ar'
   const analytics = useMemo(() => buildAnalyticsSummary(appointments, doctor, ui.language), [appointments, doctor, ui.language])
+  const { reviews, loading: reviewsLoading, notice: reviewsNotice } = useReviewsByDoctorId(doctor?.id, ui.language)
+  const reviewSummary = useMemo(() => buildReviewSummary(reviews), [reviews])
+  const reviewLabels = {
+    title: t('reviewAnalyticsTitle'),
+    averageLabel: t('reviewAverageLabel'),
+    totalLabel: t('reviewTotalLabel'),
+    distributionLabel: t('reviewDistributionLabel'),
+    recentLabel: t('reviewRecentLabel'),
+    empty: t('reviewEmpty'),
+    patientFallback: t('reviewPatientFallback'),
+    commentFallback: t('reviewCommentFallback'),
+    loadingLabel: t('reviewLoading'),
+  }
 
   const totals = appointmentStatusOrder.reduce(
     (accumulator, status) => ({
@@ -2380,6 +3817,19 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
           </div>
         </div>
 
+        {doctor ? (
+          <div className="mt-8">
+            <DoctorReviewAnalytics
+              summary={reviewSummary}
+              reviews={reviews}
+              isLoading={reviewsLoading}
+              notice={reviewsNotice}
+              labels={reviewLabels}
+              formatTimeAgo={value => formatTimeAgo(value, ui.language)}
+            />
+          </div>
+        ) : null}
+
         <div className="mt-8 space-y-4">
           {appointments.length ? (
             appointments.map(appointment => {
@@ -2403,13 +3853,27 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointments
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatAppointmentDate(appointment, ui.language)}</p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onToggleStatus(appointment)}
-                      className="rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/20 via-sky-500/20 to-emerald-400/20 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:-translate-y-0.5 hover:bg-cyan-400/25 dark:text-cyan-100"
-                    >
-                      {t('toggleStatus')} → {localizeAppointmentStatus(ui.language, nextStatus)}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onToggleStatus(appointment)}
+                        className="rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/20 via-sky-500/20 to-emerald-400/20 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:-translate-y-0.5 hover:bg-cyan-400/25 dark:text-cyan-100"
+                      >
+                        {t('toggleStatus')} → {localizeAppointmentStatus(ui.language, nextStatus)}
+                      </button>
+                      {appointment.status === 'Completed' ? (
+                        <Link
+                          to={`/review/${appointment.id}`}
+                          className="rounded-2xl border border-amber-300/30 bg-amber-200/40 px-4 py-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-200/60 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100"
+                        >
+                          {t('reviewOpen')}
+                        </Link>
+                      ) : (
+                        <span className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                          {t('reviewUnavailable')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
