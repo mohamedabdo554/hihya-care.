@@ -25,7 +25,7 @@ export default function LuxuryFooter({ isArabic }) {
 
   const iconVariants = {
     initial: { scale: 1 },
-    hover: { scale: 1.15, rotate: 5 },
+    hover: { scale: 1.04 },
   }
 
   const pulseVariants = {
@@ -111,10 +111,11 @@ export default function LuxuryFooter({ isArabic }) {
           >
             {socialIcons.map((item) => {
               const Icon = item.icon
-              const colorClasses = {
-                emerald: 'text-emerald-400 hover:shadow-emerald-500/50',
-                cyan: 'text-cyan-400 hover:shadow-cyan-500/50',
-                blue: 'text-blue-400 hover:shadow-blue-500/50',
+              const ringClasses = {
+                emerald:
+                  'border-emerald-400/35 bg-emerald-400/10 text-emerald-400 hover:shadow-emerald-500/30',
+                cyan: 'border-cyan-400/35 bg-cyan-400/10 text-cyan-400 hover:shadow-cyan-500/30',
+                blue: 'border-blue-400/35 bg-blue-400/10 text-blue-400 hover:shadow-blue-500/30',
               }
 
               return (
@@ -123,14 +124,14 @@ export default function LuxuryFooter({ isArabic }) {
                   href={item.href}
                   target="_blank"
                   rel="noreferrer"
-                  className={`p-3 rounded-full border border-${item.color}-400/30 bg-${item.color}-400/5 ${colorClasses[item.color]} transition-shadow duration-300 hover:shadow-lg`}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border transition-shadow duration-300 hover:shadow-lg [&_svg]:block ${ringClasses[item.color]}`}
                   variants={iconVariants}
                   initial="initial"
                   whileHover="hover"
                   whileTap={{ scale: 0.95 }}
                   title={item.label}
                 >
-                  <Icon size={20} />
+                  <Icon className="size-[15px] shrink-0" strokeWidth={2} aria-hidden />
                 </motion.a>
               )
             })}

@@ -1,12 +1,10 @@
-import { motion } from 'framer-motion'
-
 /**
- * Shimmer Text Component
+ * Shimmer Text Component (Optimized - CSS only)
  * Applies a luxury metallic shimmer effect to text
  */
 export function ShimmerText({ children, className = '' }) {
   return (
-    <motion.span
+    <span
       className={`shimmer-text ${className}`}
       style={{
         background: 'linear-gradient(90deg, currentColor 0%, rgba(255, 255, 255, 0.3) 50%, currentColor 100%)',
@@ -15,22 +13,14 @@ export function ShimmerText({ children, className = '' }) {
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',
       }}
-      animate={{
-        backgroundPosition: ['0px 0', '1000px 0'],
-      }}
-      transition={{
-        duration: 3,
-        repeat: Infinity,
-        ease: 'linear',
-      }}
     >
       {children}
-    </motion.span>
+    </span>
   )
 }
 
 /**
- * Glow Text Component
+ * Glow Text Component (Optimized - CSS only)
  * Adds a glowing effect to text with blur
  */
 export function GlowText({ children, className = '', color = 'cyan' }) {
@@ -41,39 +31,20 @@ export function GlowText({ children, className = '', color = 'cyan' }) {
   }
 
   return (
-    <motion.span
+    <span
       className={`${colorMap[color]} ${className}`}
-      animate={{
-        filter: ['drop-shadow(0 0 0px rgba(34, 211, 238, 0))', 'drop-shadow(0 0 20px rgba(34, 211, 238, 0.5))', 'drop-shadow(0 0 0px rgba(34, 211, 238, 0))'],
-      }}
-      transition={{
-        duration: 2,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      }}
     >
       {children}
-    </motion.span>
+    </span>
   )
 }
 
 /**
- * Scroll Progress Bar Component
+ * Scroll Progress Bar Component (Removed - no animation needed)
  * Shows scroll progress with neon effect at the top of the page
  */
 export function ScrollProgress() {
-  return (
-    <motion.div
-      className="fixed top-0 left-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-emerald-400 z-[100]"
-      style={{
-        width: '0%',
-        boxShadow: '0 0 20px rgba(34, 211, 238, 0.8)',
-      }}
-      initial={{ width: '0%' }}
-      animate={{ width: '100%' }}
-      transition={{ duration: 0.8, ease: 'easeOut' }}
-    />
-  )
+  return null
 }
 
 /**

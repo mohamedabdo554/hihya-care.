@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
   BrowserRouter,
   Link,
@@ -10,9 +10,12 @@ import {
 } from 'react-router-dom'
 import { supabase } from './supabaseClient.js'
 import DoctorCard, { type Doctor } from './DoctorCard'
-import PremiumDoctorProfile from './components/PremiumDoctorProfile'
+import DoctorProfilePageNew from './components/DoctorProfilePageNew.jsx'
+import EnhancedBookingFlow from './components/EnhancedBookingFlow.jsx'
+import AIChatWidget from './components/AIChatWidget.jsx'
 
-type BookingStatus = 'idle' | 'loading' | 'success' | 'error'
+// Lazy load heavy components
+const PremiumDoctorProfile = lazy(() => import('./components/PremiumDoctorProfile'))
 
 const fallbackDoctors: Doctor[] = [
   {
@@ -55,8 +58,6 @@ type DoctorRow = {
   price: string | number | null
   bio: string | null
 }
-
-const whatsappNumber = import.meta.env.VITE_CLINIC_WHATSAPP_NUMBER?.trim() ?? ''
 
 function App() {
   const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -127,7 +128,11 @@ function App() {
         />
         <Route
           path="/doctor/premium-preview"
-          element={<PremiumDoctorProfile />}
+          element={
+            <Suspense fallback={<AppShell><div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-300 backdrop-blur-2xl">Loading profile...</div></AppShell>}>
+              <PremiumDoctorProfile />
+            </Suspense>
+          }
         />
         <Route
           path="/doctor/:doctorId"
@@ -176,33 +181,41 @@ function HomePage({
 }) {
   return (
     <AppShell>
-      <section className="animate-[fadeIn_0.6s_ease-out]">
-        <div className="mb-10 max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Doctor Directory</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
-            Select a specialist from the Hihya Care network.
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-            A cinematic intake surface for a modern clinic booking flow. Choose a doctor, inspect the profile, then open the booking panel.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-300 backdrop-blur-2xl">
-            Loading doctors...
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Doctors Section */}
+        <section className="lg:col-span-2">
+          <div className="mb-10">
+            <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Doctor Directory</p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
+              Select a specialist from the Hihya Care network.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+              A cinematic intake surface for a modern clinic booking flow. Choose a doctor, inspect the profile, then open the booking panel.
+            </p>
           </div>
-        ) : notice ? (
-          <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-500/10 p-6 text-sm text-emerald-100 backdrop-blur-2xl">
-            {notice}
-          </div>
-        ) : null}
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {doctors.map((doctor, index) => (
-            <DoctorCard key={doctor.id} doctor={doctor} index={index} />
-          ))}
-        </div>
-      </section>
+          {loading ? (
+            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-300 backdrop-blur-2xl">
+              Loading doctors...
+            </div>
+          ) : notice ? (
+            <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-500/10 p-6 text-sm text-emerald-100 backdrop-blur-2xl">
+              {notice}
+            </div>
+          ) : null}
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {doctors.map((doctor) => (
+              <DoctorCard key={doctor.id} doctor={doctor} />
+            ))}
+          </div>
+        </section>
+
+        {/* AI Chat Widget Section */}
+        <section className="lg:col-span-1 min-h-[500px] lg:h-[600px] sticky top-6 z-10">
+          <AIChatWidget />
+        </section>
+      </div>
     </AppShell>
   )
 }
@@ -222,8 +235,8 @@ function DoctorProfilePage({
 
   if (!doctor) {
     return (
-      <AppShell>
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl">
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl max-w-md">
           <h2 className="text-2xl font-semibold text-white">
             {loading ? 'Loading doctor profile...' : 'Doctor not found'}
           </h2>
@@ -240,68 +253,20 @@ function DoctorProfilePage({
             Return Home
           </button>
         </div>
-      </AppShell>
+      </div>
     )
   }
 
+  const handleBooking = (_doctorId: string) => {
+    navigate(`/book/${_doctorId}`)
+  }
+
   return (
-    <AppShell>
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-[2rem] border border-cyan-300/15 bg-white/5 p-6 backdrop-blur-2xl">
-          <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Doctor Profile</p>
-          <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-4xl font-semibold tracking-[-0.05em] text-white">{doctor.name}</h1>
-              <p className="mt-2 text-cyan-100/80">{doctor.specialty}</p>
-            </div>
-            <div className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100">
-              Accepting Appointments
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <InfoPanel label="Experience" value={doctor.experience || doctor.bio || 'Seasoned clinical specialist'} />
-            <InfoPanel label="Clinic Location" value={doctor.clinicLocation || 'Hihya Care main wing'} />
-            <InfoPanel label="Price" value={doctor.price} />
-          </div>
-
-          <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <p className="text-sm leading-6 text-slate-300">
-              This is a premium intake profile with the same visual language as the booking flow. Press Book Now to open the live Supabase form for this doctor.
-            </p>
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(`/book/${doctor.id}`)}
-              className="rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5"
-            >
-              Book Now
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-            >
-              Back to Doctors
-            </button>
-          </div>
-        </section>
-
-        <aside className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-2xl">
-          <p className="text-xs uppercase tracking-[0.45em] text-slate-400">Profile Signal</p>
-          <div className="mt-4 rounded-[1.5rem] border border-cyan-300/15 bg-slate-950/60 p-5">
-            <p className="text-sm text-slate-300">Specialty</p>
-            <p className="mt-1 text-2xl font-semibold text-white">{doctor.specialty}</p>
-            <p className="mt-6 text-sm text-slate-300">Location</p>
-            <p className="mt-1 text-lg text-cyan-100">{doctor.clinicLocation || 'Hihya Care main wing'}</p>
-            <p className="mt-6 text-sm text-slate-300">Consultation Fee</p>
-            <p className="mt-1 text-lg text-emerald-100">{doctor.price}</p>
-          </div>
-        </aside>
-      </div>
-    </AppShell>
+    <DoctorProfilePageNew
+      doctor={doctor}
+      onBooking={handleBooking}
+      onGoBack={() => navigate('/')}
+    />
   )
 }
 
@@ -317,296 +282,67 @@ function BookingPage({
   const { doctorId } = useParams()
   const doctor = doctorId ? doctors.get(doctorId) : undefined
   const navigate = useNavigate()
-  const [patientName, setPatientName] = useState('')
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [status, setStatus] = useState<BookingStatus>('idle')
-  const [feedback, setFeedback] = useState('')
 
-  useEffect(() => {
-    if (status !== 'success') {
-      return undefined
-    }
+  if (!doctor) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl max-w-md">
+          <h2 className="text-2xl font-semibold text-white">
+            {loading ? 'Loading doctor...' : 'Doctor not found'}
+          </h2>
+          <p className="mt-3 text-slate-300">
+            {loading ? 'Please wait...' : notice || 'The doctor you requested does not exist.'}
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-6 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    )
+  }
 
-    const timer = window.setTimeout(() => {
-      setStatus('idle')
-      setFeedback('')
-    }, 4500)
-
-    return () => window.clearTimeout(timer)
-  }, [status])
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!doctorId || !doctor) {
-      setStatus('error')
-      setFeedback('Doctor data is still loading. Please try again in a moment.')
-      return
-    }
-
-    const trimmedName = patientName.trim()
-    const trimmedPhone = phoneNumber.trim()
-
-    if (!trimmedName || !trimmedPhone) {
-      setStatus('error')
-      setFeedback('Please enter both patient name and phone number.')
-      return
-    }
-
+  const handleBookingConfirm = async (bookingData: any, whatsappLink: string) => {
     try {
-      setStatus('loading')
-      setFeedback('Securing appointment...')
-
-      const bookingPayload = [
+      // Save to Supabase
+      const { error } = await supabase.from('appointments').insert([
         {
-          patient_name: trimmedName,
-          phone: trimmedPhone,
-          doctor_id: doctorId,
+          patient_name: bookingData.patientName,
+          phone: bookingData.phoneNumber,
+          doctor_id: bookingData.doctorId,
+          scheduled_date: bookingData.date,
+          scheduled_time: bookingData.time,
+          priority: bookingData.priority,
+          payment_method: bookingData.paymentMethod,
+          notes: bookingData.notes,
+          total_price: bookingData.totalPrice,
         },
-      ]
+      ])
 
-      const primaryInsert = await supabase.from('appointments').insert(bookingPayload)
-
-      if (primaryInsert.error) {
-        const fallbackNeeded = /doctor_id|schema cache|column/i.test(primaryInsert.error.message)
-
-        if (!fallbackNeeded) {
-          throw primaryInsert.error
-        }
-
-        const fallbackInsert = await supabase.from('appointments').insert([
-          {
-            patient_name: trimmedName,
-            phone: trimmedPhone,
-          },
-        ])
-
-        if (fallbackInsert.error) {
-          throw fallbackInsert.error
-        }
-
-        setFeedback('Booking saved. Doctor linkage is pending database migration.')
-      } else {
-        setFeedback('Booking confirmed and stored in the appointment ledger.')
+      if (error && !/doctor_id|schema cache|column/i.test(error.message)) {
+        console.error('Booking error:', error)
       }
 
-      setPatientName('')
-      setPhoneNumber('')
-      setStatus('success')
+      // Show success and redirect
+      navigate('/booking-success', {
+        state: {
+          bookingData,
+          whatsappLink,
+        },
+      })
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Booking failed. Please try again in a moment.'
-
-      setStatus('error')
-      setFeedback(message)
+      console.error('Error saving booking:', error)
     }
   }
 
-  const isLoading = status === 'loading'
-  const isSuccess = status === 'success'
-  const whatsappLink = doctor
-    ? `https://wa.me/${whatsappNumber || ''}?text=${encodeURIComponent(
-        `Hello Hihya Care, I just booked an appointment with ${doctor.name} via the platform.`,
-      )}`
-    : '#'
-
   return (
-    <AppShell>
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-2xl">
-          <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Booking Portal</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-white">
-            {doctor ? `Book ${doctor.name}` : 'Book Appointment'}
-          </h1>
-          <p className="mt-4 text-sm leading-6 text-slate-300">
-            The same Supabase-backed intake form, now wrapped in a routed cinematic appointment experience.
-          </p>
-          {loading ? (
-            <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-              Loading doctor details...
-            </div>
-          ) : notice ? (
-            <div className="mt-6 rounded-3xl border border-emerald-300/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-              {notice}
-            </div>
-          ) : null}
-          {doctor ? (
-            <div className="mt-6 rounded-3xl border border-cyan-300/15 bg-slate-950/60 p-5">
-              <p className="text-sm text-slate-400">Selected Doctor</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{doctor.name}</p>
-              <p className="mt-2 text-cyan-100/80">{doctor.specialty}</p>
-              <p className="mt-4 text-sm text-slate-300">{doctor.clinicLocation}</p>
-              <p className="mt-2 text-sm text-slate-300">{doctor.bio || 'Premium clinical care with a cinematic booking experience.'}</p>
-            </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => navigate(doctor ? `/doctor/${doctor.id}` : '/')}
-            className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-          >
-            Back to Profile
-          </button>
-        </div>
-
-        <div className="rounded-[2rem] border border-cyan-300/20 bg-white/5 p-4 shadow-[0_0_120px_rgba(34,211,238,0.12)] backdrop-blur-2xl sm:p-6">
-          <div className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-8">
-            <div className="mb-8 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.4em] text-cyan-200/70">Hihya Care</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
-                  Secure the booking.
-                </h2>
-              </div>
-              <div className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.28em] text-emerald-200">
-                Live Intake
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[
-                { label: 'Latency', value: '< 1s', tone: 'text-cyan-200' },
-                { label: 'Mode', value: 'Encrypted', tone: 'text-emerald-200' },
-                { label: 'Storage', value: 'Supabase', tone: 'text-sky-200' },
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
-                  <p className="text-[11px] uppercase tracking-[0.32em] text-slate-400">{item.label}</p>
-                  <p className={`mt-2 text-lg font-semibold ${item.tone}`}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-
-            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-200">Patient Name</span>
-                <div className="group rounded-2xl border border-cyan-300/15 bg-slate-950/70 px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)]">
-                  <input
-                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-slate-500"
-                    value={patientName}
-                    onChange={(event) => setPatientName(event.target.value)}
-                    placeholder="Enter patient full name"
-                    autoComplete="name"
-                    spellCheck={false}
-                    disabled={isLoading}
-                  />
-                </div>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-200">Phone Number</span>
-                <div className="group rounded-2xl border border-cyan-300/15 bg-slate-950/70 px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)]">
-                  <input
-                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-slate-500"
-                    value={phoneNumber}
-                    onChange={(event) => setPhoneNumber(event.target.value)}
-                    placeholder="Enter contact number"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    disabled={isLoading}
-                  />
-                </div>
-              </label>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-5 py-4 text-sm font-semibold text-slate-950 shadow-[0_10px_40px_rgba(34,211,238,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_60px_rgba(34,211,238,0.36)] focus:outline-none focus:ring-2 focus:ring-cyan-200/70 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
-              >
-                <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.45),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                {isLoading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950/25 border-t-slate-950" />
-                    Finalizing Booking
-                  </>
-                ) : (
-                  <>
-                    <span>Confirm Booking</span>
-                    <span className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div
-              className={`mt-6 overflow-hidden rounded-2xl border px-4 py-4 transition-all duration-500 ${
-                isSuccess
-                  ? 'border-emerald-300/40 bg-emerald-400/10 shadow-[0_0_30px_rgba(16,185,129,0.18)]'
-                  : status === 'error'
-                    ? 'border-rose-300/30 bg-rose-500/10'
-                    : 'border-white/10 bg-white/5'
-              }`}
-              role="status"
-              aria-live="polite"
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
-                    isSuccess
-                      ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-200'
-                      : status === 'error'
-                        ? 'border-rose-300/30 bg-rose-500/15 text-rose-200'
-                        : 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100'
-                  }`}
-                >
-                  {isSuccess ? (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-                      <path d="M20 7L10.5 16.5L4 10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : status === 'error' ? (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-                      <path d="M12 9V13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                      <path d="M12 17H12.01" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
-                      <path d="M10.29 3.86L1.82 18A2 2 0 0 0 3.53 21h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-current" />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white">
-                    {isSuccess
-                      ? 'Appointment secured'
-                      : status === 'error'
-                        ? 'Submission needs attention'
-                        : 'Ready for a new booking'}
-                  </p>
-                  {isSuccess ? (
-                    <div className="mt-2 space-y-3">
-                      <p className="text-sm leading-6 text-slate-300">
-                        {feedback || 'Booking confirmed.'}
-                      </p>
-                      <a
-                        href={whatsappLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/20"
-                      >
-                        Chat with Clinic on WhatsApp
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-sm leading-6 text-slate-300">
-                      {feedback || 'Enter the patient details, then confirm the booking.'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </AppShell>
-  )
-}
-
-function InfoPanel({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-      <p className="text-[11px] uppercase tracking-[0.32em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-100">{value}</p>
-    </div>
+    <EnhancedBookingFlow
+      doctor={doctor}
+      onConfirm={handleBookingConfirm}
+      onCancel={() => navigate(`/doctor/${doctor.id}`)}
+    />
   )
 }
 
