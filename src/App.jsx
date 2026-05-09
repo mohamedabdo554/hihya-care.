@@ -3097,7 +3097,7 @@ function findSpecialty(text) {
   return null
 }
 
-function localTriageResponse(context, turns) {
+function localTriageResponse(context, turns, doctors) {
   const userTexts = turns.filter(t => t.role === 'user').map(t => t.text.toLowerCase())
 
   const allUserText = userTexts.join(' ')
@@ -3159,6 +3159,26 @@ function localTriageResponse(context, turns) {
     return arr[(userTexts.length + seed) % arr.length]
   }
 
+  function buildRecommendation(specialty, reason) {
+    const candidates = Array.isArray(doctors) ? pickCoordinatorDoctors(doctors, specialty) : []
+    const first = candidates[0]
+    const name = first?.name || ''
+    const id = first?.id || null
+    const answer = name
+      ? `أرشحلك الدكتور ${name} (${specialty})`
+      : `التخصص المناسب: ${specialty}`
+    return {
+      medical_answer: answer,
+      specialty_hint: specialty,
+      triage_complete: true,
+      emergency_alert: false,
+      recommended_doctor_id: id,
+      recommended_doctor_name: name,
+      missing_specialty_only: '',
+      recommendation_reason: reason || `الأعراض تناسب ${specialty}`,
+    }
+  }
+
   if (!hasLocation && !matched) {
     return { medical_answer: pick(responses.location, 0), specialty_hint: '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
   }
@@ -3176,11 +3196,11 @@ function localTriageResponse(context, turns) {
   }
 
   if (gotAge && gotDuration && gotSeverity && matched) {
-    return { medical_answer: `خلاص كفاية. الحالة دي محتاجة تخصص ${matched.specialty}.`, specialty_hint: matched.specialty, triage_complete: true, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: `الأعراض تناسب ${matched.specialty}` }
+    return buildRecommendation(matched.specialty, `الأعراض تناسب ${matched.specialty}`)
   }
 
   if (gotAge && gotDuration && gotSeverity) {
-    return { medical_answer: 'خلاص كفاية. التخصص الأنسب: باطنة.', specialty_hint: 'باطنة', triage_complete: true, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: 'الأعراض تحتاج تقييم باطنة' }
+    return buildRecommendation('باطنة', 'الأعراض تحتاج تقييم باطنة')
   }
 
   return { medical_answer: 'تمام. عايز أعرف كمان التفاصيل: العمر، المدة، والشدة.', specialty_hint: matched?.specialty || '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
@@ -3263,7 +3283,7 @@ function MedicalCoordinatorPanel({ ui, variant = 'compact' }) {
 
       let parsedResult = await fetchMedicalCoordinatorJson(prompt)
       if (!parsedResult) {
-        parsedResult = localTriageResponse(mergedContext, nextTurns)
+        parsedResult = localTriageResponse(mergedContext, nextTurns, doctorsSnapshot)
       }
 
       const parsed = parsedResult
