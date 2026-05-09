@@ -13,6 +13,12 @@ import DoctorCard, { type Doctor } from './DoctorCard'
 import DoctorProfilePageNew from './components/DoctorProfilePageNew.jsx'
 import EnhancedBookingFlow from './components/EnhancedBookingFlow.jsx'
 import AIChatWidget from './components/AIChatWidget.jsx'
+import LuxuryHeader from './components/LuxuryHeader.jsx'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import ProtectedLayout from './components/ProtectedLayout'
+import { DoctorDashboard } from './components/dashboard/DoctorDashboard'
+import AITriageChat from './components/ai/AITriageChat'
+import { TriageProvider } from './context/TriageContext'
 
 // Lazy load heavy components
 const PremiumDoctorProfile = lazy(() => import('./components/PremiumDoctorProfile'))
@@ -120,31 +126,65 @@ function App() {
   )
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={<HomePage doctors={doctors} loading={doctorsLoading} notice={doctorsNotice} />}
-        />
-        <Route
-          path="/doctor/premium-preview"
-          element={
-            <Suspense fallback={<AppShell><div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-300 backdrop-blur-2xl">Loading profile...</div></AppShell>}>
-              <PremiumDoctorProfile />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/doctor/:doctorId"
-          element={<DoctorProfilePage doctors={doctorLookup} loading={doctorsLoading} notice={doctorsNotice} />}
-        />
-        <Route
-          path="/book/:doctorId"
-          element={<BookingPage doctors={doctorLookup} loading={doctorsLoading} notice={doctorsNotice} />}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <TriageProvider>
+        <Routes>
+          <Route
+            path="/"
+            element={<HomePage doctors={doctors} loading={doctorsLoading} notice={doctorsNotice} />}
+          />
+          <Route
+            path="/doctor/premium-preview"
+            element={
+              <Suspense fallback={<AppShell><div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-300 backdrop-blur-2xl">Loading profile...</div></AppShell>}>
+                <PremiumDoctorProfile />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/doctor/:doctorId"
+            element={<DoctorProfilePage doctors={doctorLookup} loading={doctorsLoading} notice={doctorsNotice} />}
+          />
+          <Route
+            path="/book/:doctorId"
+            element={<BookingPage doctors={doctorLookup} loading={doctorsLoading} notice={doctorsNotice} />}
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedLayout>
+                <ErrorBoundary>
+                  <DoctorDashboard />
+                </ErrorBoundary>
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/doctor-dashboard"
+            element={
+              <ProtectedLayout>
+                <ErrorBoundary>
+                  <DoctorDashboard />
+                </ErrorBoundary>
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/ai-triage"
+            element={
+              <ProtectedLayout>
+                <ErrorBoundary>
+                  <AITriageChat />
+                </ErrorBoundary>
+              </ProtectedLayout>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </TriageProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 
@@ -155,15 +195,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:64px_64px] opacity-20 [mask-image:radial-gradient(circle_at_center,black,transparent_82%)]" />
       <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-400/20 blur-3xl" />
       <div className="absolute right-10 top-24 h-52 w-52 rounded-full bg-emerald-500/10 blur-3xl" />
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-8 flex items-center justify-between rounded-3xl border border-cyan-300/15 bg-white/5 px-5 py-4 backdrop-blur-xl">
-          <Link to="/" className="text-sm font-semibold uppercase tracking-[0.35em] text-cyan-100">
-            Hihya Care
-          </Link>
-          <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.3em] text-slate-300">
-            Tech-noir Clinic Network
-          </div>
-        </header>
+      <LuxuryHeader />
+      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-20 sm:px-6 lg:px-8">
         {children}
       </div>
     </main>
@@ -213,7 +246,7 @@ function HomePage({
 
         {/* AI Chat Widget Section */}
         <section className="lg:col-span-1 min-h-[500px] lg:h-[600px] sticky top-6 z-10">
-          <AIChatWidget />
+          <AIChatWidget doctors={doctors} />
         </section>
       </div>
     </AppShell>
@@ -304,20 +337,39 @@ function BookingPage({
     )
   }
 
+  function getActualDate(selectedDate: string): string {
+    const d = new Date()
+    if (selectedDate === 'tomorrow') d.setDate(d.getDate() + 1)
+    else if (selectedDate === 'dayAfter') d.setDate(d.getDate() + 2)
+    return d.toISOString().slice(0, 10)
+  }
+
+  function convertTo24h(time12: string): string {
+    const [time, modifier] = time12.split(' ')
+    let [hours, minutes] = time.split(':').map(Number)
+    if (modifier === 'PM' && hours !== 12) hours += 12
+    if (modifier === 'AM' && hours === 12) hours = 0
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  }
+
   const handleBookingConfirm = async (bookingData: any, whatsappLink: string) => {
     try {
+      const actualDate = getActualDate(bookingData.date)
+      const actualTime = convertTo24h(bookingData.time)
+
       // Save to Supabase
       const { error } = await supabase.from('appointments').insert([
         {
           patient_name: bookingData.patientName,
-          phone: bookingData.phoneNumber,
+          patient_phone: bookingData.phoneNumber,
           doctor_id: bookingData.doctorId,
-          scheduled_date: bookingData.date,
-          scheduled_time: bookingData.time,
+          appointment_date: actualDate,
+          appointment_time: actualTime,
           priority: bookingData.priority,
           payment_method: bookingData.paymentMethod,
           notes: bookingData.notes,
           total_price: bookingData.totalPrice,
+          status: 'booked',
         },
       ])
 

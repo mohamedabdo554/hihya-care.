@@ -10,6 +10,8 @@ export default function MedicalFileUploader({
   patientName = '',
   doctorName = '',
   variant = 'full',
+  onFilesChange,
+  onIntakeChange,
 }) {
   const inputId = useId()
   const [age, setAge] = useState('')
@@ -17,6 +19,10 @@ export default function MedicalFileUploader({
   const [symptoms, setSymptoms] = useState('')
   const [files, setFiles] = useState([])
   const [dragOver, setDragOver] = useState(false)
+
+  const fireIntake = useCallback((a, g, s, f) => {
+    if (onIntakeChange) onIntakeChange({ age: a, gender: g, symptoms: s, files: f })
+  }, [onIntakeChange])
 
   const isAr = language === 'ar'
 
@@ -61,8 +67,13 @@ export default function MedicalFileUploader({
         /\.(pdf|png|jpe?g)$/i.test(f.name)
       return ok && f.size < 12 * 1024 * 1024
     })
-    setFiles(prev => [...prev, ...next].slice(0, 6))
-  }, [])
+    setFiles(prev => {
+      const updated = [...prev, ...next].slice(0, 6)
+      if (onFilesChange) onFilesChange(updated)
+      fireIntake(age, gender, symptoms, updated)
+      return updated
+    })
+  }, [onFilesChange, fireIntake, age, gender, symptoms])
 
   const onDrop = useCallback(
     e => {
@@ -103,21 +114,21 @@ export default function MedicalFileUploader({
       <div className={`grid gap-4 ${compact ? 'mt-3 sm:grid-cols-2' : 'mt-4 sm:grid-cols-2'}`}>
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-200">{labels.age}</span>
-          <input
-            type="number"
-            min={0}
-            max={120}
-            value={age}
-            onChange={e => setAge(e.target.value)}
-            className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-sm text-slate-900 shadow-inner outline-none ring-blue-400/0 transition focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
-            placeholder={isAr ? 'مثال: 35' : 'e.g. 35'}
-          />
+            <input
+              type="number"
+              min={0}
+              max={120}
+              value={age}
+              onChange={e => { const v = e.target.value; setAge(v); fireIntake(v, gender, symptoms, files) }}
+              className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-sm text-slate-900 shadow-inner outline-none ring-blue-400/0 transition focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
+              placeholder={isAr ? 'مثال: 35' : 'e.g. 35'}
+            />
         </label>
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-200">{labels.gender}</span>
           <select
             value={gender}
-            onChange={e => setGender(e.target.value)}
+            onChange={e => { const v = e.target.value; setGender(v); fireIntake(age, v, symptoms, files) }}
             className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
           >
             <option value="">{isAr ? '— اختر —' : '— Select —'}</option>
@@ -137,7 +148,7 @@ export default function MedicalFileUploader({
         <textarea
           value={symptoms}
           maxLength={SYMPTOM_MAX}
-          onChange={e => setSymptoms(e.target.value)}
+          onChange={e => { const v = e.target.value; setSymptoms(v); fireIntake(age, gender, v, files) }}
           placeholder={labels.placeholder}
           rows={compact ? 3 : 4}
           className="w-full resize-none rounded-xl border border-blue-100/80 bg-white/80 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"

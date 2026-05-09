@@ -24,7 +24,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { ArrowLeft, Clock, Mail, MapPin, MessageCircleMore, Phone, Sparkles, Stethoscope, Star, Wallet } from 'lucide-react'
+import { ArrowLeft, Clock, Mail, MapPin, MessageCircleMore, Phone, Sparkles, Stethoscope, Star, Wallet, HeartPulse, Activity, AlertTriangle, CheckCircle2, XCircle, UserRound, MessageCircle, DollarSign, TrendingUp, Clock3, Users, ScanLine, ShieldCheck, BarChart3, Loader2, TriangleAlert, CalendarCheck, CalendarDays, Smile, PhoneCall } from 'lucide-react'
 import DoctorReviewAnalytics from './components/DoctorReviewAnalytics.jsx'
 import DoctorAvailabilityShowcase from './components/DoctorAvailabilityShowcase.jsx'
 import ReviewFeedbackCard from './components/ReviewFeedbackCard.jsx'
@@ -36,6 +36,9 @@ import { supabase } from './supabaseClient.js'
 const DashboardPortfolio = lazy(() => import('./components/DashboardPortfolio.jsx'))
 const PremiumDoctorProfile = lazy(() => import('./components/PremiumDoctorProfile.jsx'))
 const CinematicAnalyticsDashboard = lazy(() => import('./components/CinematicAnalyticsDashboard.jsx'))
+const AITriageChat = lazy(() => import('./components/ai/AITriageChat.tsx'))
+const DoctorDashboard = lazy(() => import('./components/dashboard/DoctorDashboard.tsx'))
+import { TriageProvider } from './context/TriageContext'
 
 function RouteFallback({ ui }) {
   const isAr = ui?.language === 'ar'
@@ -830,7 +833,33 @@ function writeLocalAppointments(appointments) {
   }
 }
 
-function createLocalAppointment(doctorId, patientName, phone, appointmentDateIso) {
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+async function filesToAttachments(files) {
+  const results = []
+  for (const file of files) {
+    try {
+      if (file.size > 3 * 1024 * 1024) {
+        results.push({ name: file.name, data: null, size: file.size, tooLarge: true })
+      } else {
+        const data = await readFileAsBase64(file)
+        results.push({ name: file.name, data, size: file.size })
+      }
+    } catch {
+      results.push({ name: file.name, data: null, size: file.size, error: true })
+    }
+  }
+  return results
+}
+
+function createLocalAppointment(doctorId, patientName, phone, appointmentDateIso, symptoms) {
   const iso =
     appointmentDateIso && !Number.isNaN(new Date(appointmentDateIso).getTime())
       ? appointmentDateIso
@@ -839,12 +868,14 @@ function createLocalAppointment(doctorId, patientName, phone, appointmentDateIso
   return {
     id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     patient_name: patientName,
+    patient_phone: phone,
     phone,
     appointment_date: iso,
     time: iso,
     status: 'Pending',
     doctor_id: doctorId,
     source: 'local',
+    symptoms: symptoms || null,
   }
 }
 
@@ -1143,6 +1174,7 @@ function parseClinicImages(value) {
 function makeDoctorFromRow(row) {
   return {
     id: String(row.id),
+    user_id: row.user_id ?? null,
     name: row.name,
     name_en: row.name_en ?? null,
     name_ar: row.name_ar ?? null,
@@ -1230,12 +1262,12 @@ function createFallbackAppointments(doctorId, language) {
   const mockAppointments = language === 'ar'
     ? [
         // مواعيد اليوم (مايو 3)
-        { id: `${doctorId}-1`, patient_name: "أية محمود", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T09:00:00.000Z", time: "09:00" },
-        { id: `${doctorId}-2`, patient_name: "مينا عادل", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T09:30:00.000Z", time: "09:30" },
+        { id: `${doctorId}-1`, patient_name: "أية محمود", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T09:00:00.000Z", time: "09:00", symptoms: "صداع نصفي منذ ٣ أيام مع زغللة" },
+        { id: `${doctorId}-2`, patient_name: "مينا عادل", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T09:30:00.000Z", time: "09:30", symptoms: "ألم في البطن وإسهال" },
         { id: `${doctorId}-3`, patient_name: "سارة فؤاد", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T10:15:00.000Z", time: "10:15" },
-        { id: `${doctorId}-4`, patient_name: "ياسر حسن", phone: "+201033304567", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-4`, patient_name: "ياسر حسن", phone: "+201033304567", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T11:00:00.000Z", time: "11:00", symptoms: "ارتفاع ضغط مفاجئ" },
         { id: `${doctorId}-5`, patient_name: "ديانا شريف", phone: "+201044405678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T11:45:00.000Z", time: "11:45" },
-        { id: `${doctorId}-6`, patient_name: "محمد سامح", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T14:00:00.000Z", time: "14:00" },
+        { id: `${doctorId}-6`, patient_name: "محمد سامح", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T14:00:00.000Z", time: "14:00", symptoms: "حمى وكحة منذ أسبوع" },
         // مواعيد أمس (مايو 2)
         { id: `${doctorId}-7`, patient_name: "نور خالد", phone: "+201055523456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
         { id: `${doctorId}-8`, patient_name: "يوسف عمر", phone: "+201055534567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:00:00.000Z", time: "10:00" },
@@ -1253,12 +1285,12 @@ function createFallbackAppointments(doctorId, language) {
       ]
     : [
         // Today's appointments (May 3)
-        { id: `${doctorId}-1`, patient_name: "Aya Mahmoud", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T09:00:00.000Z", time: "09:00" },
-        { id: `${doctorId}-2`, patient_name: "Mina Adel", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T09:30:00.000Z", time: "09:30" },
+        { id: `${doctorId}-1`, patient_name: "Aya Mahmoud", phone: "+201055501234", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T09:00:00.000Z", time: "09:00", symptoms: "Migraine for 3 days with blurred vision" },
+        { id: `${doctorId}-2`, patient_name: "Mina Adel", phone: "+201066602345", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T09:30:00.000Z", time: "09:30", symptoms: "Abdominal pain and diarrhea" },
         { id: `${doctorId}-3`, patient_name: "Sara Fouad", phone: "+201022203456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T10:15:00.000Z", time: "10:15" },
-        { id: `${doctorId}-4`, patient_name: "Yasser Hassan", phone: "+201033304567", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T11:00:00.000Z", time: "11:00" },
+        { id: `${doctorId}-4`, patient_name: "Yasser Hassan", phone: "+201033304567", doctor_id: doctorId, status: "In Clinic", appointment_date: "2026-05-03T11:00:00.000Z", time: "11:00", symptoms: "Sudden high blood pressure" },
         { id: `${doctorId}-5`, patient_name: "Dina Sherif", phone: "+201044405678", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-03T11:45:00.000Z", time: "11:45" },
-        { id: `${doctorId}-6`, patient_name: "Mohamed Sameh", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T14:00:00.000Z", time: "14:00" },
+        { id: `${doctorId}-6`, patient_name: "Mohamed Sameh", phone: "+201011106789", doctor_id: doctorId, status: "Pending", appointment_date: "2026-05-03T14:00:00.000Z", time: "14:00", symptoms: "Fever and cough for a week" },
         // Yesterday's appointments (May 2)
         { id: `${doctorId}-7`, patient_name: "Noor Khaled", phone: "+201055523456", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T09:00:00.000Z", time: "09:00" },
         { id: `${doctorId}-8`, patient_name: "Youssef Omar", phone: "+201055534567", doctor_id: doctorId, status: "Completed", appointment_date: "2026-05-02T10:00:00.000Z", time: "10:00" },
@@ -1575,29 +1607,35 @@ function parseCoordinatorJsonFromText(modelText) {
 }
 
 async function fetchCoordinatorJsonWithGemini(prompt, apiKey) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 1536,
-          responseMimeType: 'application/json',
-        },
-      }),
-    },
-  )
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 6000)
 
-  if (!response.ok) {
-    throw new Error(`gemini:${response.status}`)
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1536,
+            responseMimeType: 'application/json',
+          },
+        }),
+        signal: controller.signal,
+      },
+    )
+    clearTimeout(timeout)
+    if (!response.ok) return null
+    const payload = await response.json()
+    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+    return parseCoordinatorJsonFromText(text)
+  } catch {
+    clearTimeout(timeout)
+    return null
   }
-
-  const payload = await response.json()
-  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
-  return parseCoordinatorJsonFromText(text)
 }
 
 async function fetchCoordinatorJsonWithGroq(prompt, apiKey) {
@@ -1608,38 +1646,25 @@ async function fetchCoordinatorJsonWithGroq(prompt, apiKey) {
     'Content-Type': 'application/json',
   }
 
-  let response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-      max_tokens: 1400,
-      response_format: { type: 'json_object' },
-    }),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 6000)
 
-  if (!response.ok) {
-    response = await fetch(url, {
+  try {
+    const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.2,
-        max_tokens: 1400,
-      }),
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: 1400, response_format: { type: 'json_object' } }),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
+    if (!res.ok) return null
+    const payload = await res.json()
+    const text = payload?.choices?.[0]?.message?.content || '{}'
+    return parseCoordinatorJsonFromText(text)
+  } catch {
+    clearTimeout(timeout)
+    return null
   }
-
-  if (!response.ok) {
-    throw new Error(`groq:${response.status}`)
-  }
-
-  const payload = await response.json()
-  const text = payload?.choices?.[0]?.message?.content || '{}'
-  return parseCoordinatorJsonFromText(text)
 }
 
 async function fetchMedicalCoordinatorJson(prompt) {
@@ -1759,6 +1784,20 @@ function App() {
   const [loadingDoctors, setLoadingDoctors] = useState(true)
   const [doctorsNotice, setDoctorsNotice] = useState('')
 
+  // Diagnose Supabase connection
+  useEffect(() => {
+    const hasUrl = Boolean(import.meta.env.VITE_SUPABASE_URL)
+    const hasKey = Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY)
+    console.log('[Supabase] Config:', hasUrl ? 'URL ✓' : 'URL ✗', hasKey ? 'Key ✓' : 'Key ✗')
+    if (hasUrl && hasKey) {
+      supabase.from('doctors').select('count', { count: 'exact', head: true }).then(r =>
+        console.log('[Supabase] Connection test:', r.error ? `FAIL: ${r.error.message}` : 'OK ✓')
+      ).catch(e => console.log('[Supabase] Connection error:', e.message))
+    } else {
+      console.log('[Supabase] Using FALLBACK client (no credentials)')
+    }
+  }, [])
+
   useEffect(() => {
     document.documentElement.lang = language === 'ar' ? 'ar' : 'en'
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
@@ -1787,20 +1826,26 @@ function App() {
       setLoadingDoctors(true)
       setDoctorsNotice('')
 
-      const { data, error } = await supabase
-        .from('doctors')
-        .select('*')
-        .order('name', { ascending: true })
+      try {
+        const { data, error } = await supabase
+          .from('doctors')
+          .select('*')
+          .order('name', { ascending: true })
 
-      if (!active) {
-        return
-      }
+        if (!active) return
 
-      if (error || !Array.isArray(data) || data.length === 0) {
-        setDoctors(createFallbackDoctors())
-        setDoctorsNotice(getText(language, 'fallbackNotice'))
-      } else {
-        setDoctors(data.map(makeDoctorFromRow))
+        if (error || !Array.isArray(data) || data.length === 0) {
+          setDoctors(createFallbackDoctors())
+          if (error) setDoctorsNotice(`${getText(language, 'fallbackNotice')} (${error.message})`)
+          else setDoctorsNotice(getText(language, 'fallbackNotice'))
+        } else {
+          setDoctors(data.map(makeDoctorFromRow))
+        }
+      } catch (err) {
+        if (active) {
+          setDoctors(createFallbackDoctors())
+          setDoctorsNotice(`${getText(language, 'fallbackNotice')} (${err instanceof Error ? err.message : 'Network error'})`)
+        }
       }
 
       setLoadingDoctors(false)
@@ -1826,6 +1871,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <TriageProvider>
         <Suspense fallback={<RouteFallback ui={ui} />}>
           <Routes>
             <Route path="/" element={<HomePage doctors={doctors} loading={loadingDoctors} notice={doctorsNotice} ui={ui} />} />
@@ -1838,9 +1884,12 @@ function App() {
             <Route path="/dashboard" element={<DashboardAccessPage ui={ui} />} />
             <Route path="/review/:appointmentId" element={<ReviewPage ui={ui} />} />
             <Route path="/dashboard/:doctorId" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/ai-triage" element={<AITriageChat />} />
+            <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </TriageProvider>
       </BrowserRouter>
     </QueryClientProvider>
   )
@@ -1887,6 +1936,14 @@ function AppShell({ children, ui }) {
             </Link>
 
             <div className="flex items-center gap-1 sm:gap-2">
+              <Link to="/dashboard" className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/15 to-emerald-400/15 px-3 py-1.5 text-[10px] font-semibold text-cyan-700 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.2)] dark:text-cyan-200 dark:from-cyan-500/15 dark:to-emerald-500/15">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                {isArabic ? 'لوحة التحكم' : 'Dashboard'}
+              </Link>
+              <Link to="/" className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-violet-300/25 bg-gradient-to-r from-violet-400/15 to-cyan-400/15 px-3 py-1.5 text-[10px] font-semibold text-violet-700 transition hover:shadow-[0_0_16px_rgba(139,92,246,0.2)] dark:text-violet-200 dark:from-violet-500/15 dark:to-cyan-500/15">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                {isArabic ? 'المساعد الذكي' : 'AI Chat'}
+              </Link>
               <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:hidden">
                 <button
                   type="button"
@@ -2281,6 +2338,10 @@ function HomePage({ doctors, loading, notice, ui }) {
         .map(value => String(value).toLowerCase())
       const matchesSearch = !query || nameValues.some(value => value.includes(query))
 
+      const clinicStatus = typeof window !== 'undefined' ? window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) : null
+      const isClosed = clinicStatus === 'closed' || clinicStatus === 'break'
+      if (isClosed && availabilityFilter === 'today') return false
+
       const doctorSpecialties = Array.isArray(doctor.specialties)
         ? doctor.specialties
         : doctor.specialty
@@ -2537,41 +2598,52 @@ function useDoctorById(doctorId, language) {
   useEffect(() => {
     let active = true
 
-    const loadDoctor = async () => {
-      if (!doctorId) {
-        setDoctor(null)
-        setLoading(false)
-        return
-      }
-
-      setLoading(true)
-      setNotice('')
-
-      const { data, error } = await supabase
-        .from('doctors')
-        .select('*')
-        .eq('id', doctorId)
-        .maybeSingle()
-
-      if (!active) {
-        return
-      }
-
-      if (error || !data) {
-        const fallbackDoctor = createFallbackDoctor(doctorId)
-        if (fallbackDoctor) {
-          setDoctor(localizeDoctor(language, fallbackDoctor))
-          setNotice(getText(language, 'supplyNotice'))
-        } else {
+      const loadDoctor = async () => {
+        if (!doctorId) {
           setDoctor(null)
-          setNotice(error?.message || getText(language, 'doctorNotFoundDescription'))
+          setLoading(false)
+          return
         }
-      } else {
-        setDoctor(localizeDoctor(language, makeDoctorFromRow(data)))
-      }
 
-      setLoading(false)
-    }
+        setLoading(true)
+        setNotice('')
+
+        try {
+          const { data, error } = await supabase
+            .from('doctors')
+            .select('*')
+            .eq('id', doctorId)
+            .maybeSingle()
+
+          if (!active) return
+
+          if (error || !data) {
+            const fallbackDoctor = createFallbackDoctor(doctorId)
+            if (fallbackDoctor) {
+              setDoctor(localizeDoctor(language, fallbackDoctor))
+              setNotice(error?.message ? `${getText(language, 'supplyNotice')} (${error.message})` : getText(language, 'supplyNotice'))
+            } else {
+              setDoctor(null)
+              setNotice(error?.message || getText(language, 'doctorNotFoundDescription'))
+            }
+          } else {
+            setDoctor(localizeDoctor(language, makeDoctorFromRow(data)))
+          }
+        } catch (err) {
+          if (active) {
+            const fallbackDoctor = createFallbackDoctor(doctorId)
+            if (fallbackDoctor) {
+              setDoctor(localizeDoctor(language, fallbackDoctor))
+              setNotice(`${getText(language, 'supplyNotice')} (${err instanceof Error ? err.message : 'Network error'})`)
+            } else {
+              setDoctor(null)
+              setNotice(err instanceof Error ? err.message : getText(language, 'doctorNotFoundDescription'))
+            }
+          }
+        }
+
+        setLoading(false)
+      }
 
     loadDoctor()
 
@@ -2605,27 +2677,38 @@ function useDoctorByCode(secretCode, language) {
       setLoading(true)
       setNotice('')
 
-      const { data, error } = await supabase
-        .from('doctors')
-        .select('*')
-        .eq('secret_code', normalizedCode)
-        .maybeSingle()
+      try {
+        const { data, error } = await supabase
+          .from('doctors')
+          .select('*')
+          .eq('secret_code', normalizedCode)
+          .maybeSingle()
 
-      if (!active) {
-        return
-      }
+        if (!active) return
 
-      if (error || !data) {
-        const fallbackDoctor = createFallbackDoctorByCode(normalizedCode)
-        if (fallbackDoctor) {
-          setDoctor(localizeDoctor(language, fallbackDoctor))
-          setNotice(getText(language, 'supplyNotice'))
+        if (error || !data) {
+          const fallbackDoctor = createFallbackDoctorByCode(normalizedCode)
+          if (fallbackDoctor) {
+            setDoctor(localizeDoctor(language, fallbackDoctor))
+            setNotice(error?.message ? `${getText(language, 'supplyNotice')} (${error.message})` : getText(language, 'supplyNotice'))
+          } else {
+            setDoctor(null)
+            setNotice(getText(language, 'invalidDashboardCode'))
+          }
         } else {
-          setDoctor(null)
-          setNotice(getText(language, 'invalidDashboardCode'))
+          setDoctor(localizeDoctor(language, makeDoctorFromRow(data)))
         }
-      } else {
-        setDoctor(localizeDoctor(language, makeDoctorFromRow(data)))
+      } catch (err) {
+        if (active) {
+          const fallbackDoctor = createFallbackDoctorByCode(normalizedCode)
+          if (fallbackDoctor) {
+            setDoctor(localizeDoctor(language, fallbackDoctor))
+            setNotice(`${getText(language, 'supplyNotice')} (${err instanceof Error ? err.message : 'Network error'})`)
+          } else {
+            setDoctor(null)
+            setNotice(err instanceof Error ? err.message : getText(language, 'invalidDashboardCode'))
+          }
+        }
       }
 
       setLoading(false)
@@ -2639,6 +2722,15 @@ function useDoctorByCode(secretCode, language) {
   }, [secretCode, language])
 
   return { doctor, loading, notice }
+}
+
+function InfoPanel({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
+      <p className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1.5 text-sm font-semibold text-slate-900 dark:text-white">{value || '—'}</p>
+    </div>
+  )
 }
 
 function DoctorProfilePage({ loading, notice, ui }) {
@@ -2985,6 +3077,115 @@ function DoctorProfilePage({ loading, notice, ui }) {
   )
 }
 
+const SYMPTOM_SPECIALTY = [
+  { keywords: ['صدر', 'قلب', 'نهجان', 'ضيق نفس', 'نبض', 'دقات'], specialty: 'قلب وأوعية دموية', specEn: 'Cardiology' },
+  { keywords: ['بطن', 'جنب', 'يمين', 'يسار', 'سرة', 'تحت', 'ترجيع', 'غثيان', 'إسهال', 'سخونية', 'حرارة', 'حمى', 'كحة', 'برد', 'عطس'], specialty: 'باطنة', specEn: 'Internal Medicine' },
+  { keywords: ['صداع', 'زغللة', 'دوخة', 'تنميل', 'شلل', 'رعشة'], specialty: 'مخ وأعصاب', specEn: 'Neurology' },
+  { keywords: ['جلد', 'حكة', 'طفح', 'قشرة', 'شعر', 'ثعلبة', 'حساسية'], specialty: 'جلدية', specEn: 'Dermatology' },
+  { keywords: ['عظم', 'مفصل', 'ركبة', 'قدم', 'يد', 'كتف', 'ظهر', 'رقبة'], specialty: 'عظام', specEn: 'Orthopedics' },
+  { keywords: ['مثانة', 'بول', 'كلى', 'حصوات', 'تبول'], specialty: 'مسالك بولية', specEn: 'Urology' },
+  { keywords: ['طفل', 'أطفال', 'رضيع', 'بيبي'], specialty: 'أطفال', specEn: 'Pediatrics' },
+  { keywords: ['نفسية', 'قلق', 'اكتئاب', 'نفس'], specialty: 'طب نفسي', specEn: 'Psychiatry' },
+  { keywords: ['جرح', 'قطع', 'تورم', 'ورم'], specialty: 'جراحة عامة', specEn: 'General Surgery' },
+]
+
+function findSpecialty(text) {
+  const t = text.toLowerCase()
+  for (const s of SYMPTOM_SPECIALTY) {
+    if (s.keywords.some(k => t.includes(k))) return s
+  }
+  return null
+}
+
+function localTriageResponse(context, turns) {
+  const userTexts = turns.filter(t => t.role === 'user').map(t => t.text.toLowerCase())
+
+  const allUserText = userTexts.join(' ')
+
+  const hasLocation = /(يمين|شمال|بطن|صدر|راس|قدم|يد|ركبة|ظهر|مثانة|حلق|عين|أذن)/i.test(allUserText)
+  const hasAge = /\d+.*(سنة|سنه|عام|سن)/i.test(allUserText) || /(عمري|عمرى|سن).*\d+/i.test(allUserText)
+  const hasDuration = /(ساعة|ساعات|يوم|أيام|شهر|شهور|أسبوع|اسبوع|دقائق|لحظة)/i.test(allUserText)
+  const hasSeverity = /(شديدة|شديد|جامد|أوي|خفيف|متوسط|\d+\s*\/\s*10|10\/10|9\/10|8\/10|7\/10|لا يحتمل)/i.test(allUserText)
+
+  const matched = findSpecialty(allUserText)
+
+  const lastAskAt = (pattern) => {
+    for (let i = turns.length - 1; i >= 0; i--)
+      if (turns[i].role === 'assistant' && pattern.test(turns[i].text)) return i
+    return -1
+  }
+
+  const repliedAfter = (askIdx) => askIdx >= 0 && turns.slice(askIdx + 1).some(t => t.role === 'user')
+
+  const ageAskAt = lastAskAt(/(عمر|سن|كم.*سنة)/)
+  const durAskAt = lastAskAt(/(من امتى|مدة|بقاله|بقالك)/)
+  const sevAskAt = lastAskAt(/(شدة|قد إيه|1 لـ 10|1 إلى 10)/)
+
+  const gotAge = hasAge || repliedAfter(ageAskAt)
+  const gotDuration = hasDuration || repliedAfter(durAskAt)
+  const gotSeverity = hasSeverity || repliedAfter(sevAskAt)
+  const askedAge = ageAskAt >= 0
+  const askedDuration = durAskAt >= 0
+  const askedSeverity = sevAskAt >= 0
+
+  const needToAskAge = !gotAge && !askedAge
+  const needToAskDuration = !gotDuration && !askedDuration
+  const needToAskSeverity = !gotSeverity && !askedSeverity
+
+  const responses = {
+    location: [
+      'فين بالظبط المكان اللي بيوجعك؟',
+      'حدد مكان الألم بالظبط.',
+      'الألم فين في الجسم؟',
+    ],
+    age: [
+      'عندك كام سنة؟',
+      'كم عمرك؟',
+      'سنك كام؟',
+    ],
+    duration: [
+      'من امتى بالظبط والأعراض دي؟',
+      'بقالك كام يوم كدا؟',
+      'مدة الأعراض دي قد إيه؟',
+    ],
+    severity: [
+      'قد إيه شدة الألم من 1 لـ 10؟',
+      'حدد الشدة: خفيف ولا متوسط ولا شديد؟',
+      'الألم درجة كام من 10؟',
+    ],
+  }
+
+  function pick(arr, seed) {
+    return arr[(userTexts.length + seed) % arr.length]
+  }
+
+  if (!hasLocation && !matched) {
+    return { medical_answer: pick(responses.location, 0), specialty_hint: '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
+  }
+
+  if (needToAskAge) {
+    return { medical_answer: pick(responses.age, 1), specialty_hint: matched?.specialty || '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
+  }
+
+  if (needToAskDuration) {
+    return { medical_answer: pick(responses.duration, 2), specialty_hint: matched?.specialty || '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
+  }
+
+  if (needToAskSeverity) {
+    return { medical_answer: pick(responses.severity, 3), specialty_hint: matched?.specialty || '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
+  }
+
+  if (gotAge && gotDuration && gotSeverity && matched) {
+    return { medical_answer: `خلاص كفاية. الحالة دي محتاجة تخصص ${matched.specialty}.`, specialty_hint: matched.specialty, triage_complete: true, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: `الأعراض تناسب ${matched.specialty}` }
+  }
+
+  if (gotAge && gotDuration && gotSeverity) {
+    return { medical_answer: 'خلاص كفاية. التخصص الأنسب: باطنة.', specialty_hint: 'باطنة', triage_complete: true, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: 'الأعراض تحتاج تقييم باطنة' }
+  }
+
+  return { medical_answer: 'تمام. عايز أعرف كمان التفاصيل: العمر، المدة، والشدة.', specialty_hint: matched?.specialty || '', triage_complete: false, emergency_alert: false, recommended_doctor_id: null, recommended_doctor_name: '', missing_specialty_only: '', recommendation_reason: '' }
+}
+
 function MedicalCoordinatorPanel({ ui, variant = 'compact' }) {
   const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
@@ -3060,40 +3261,39 @@ function MedicalCoordinatorPanel({ ui, variant = 'compact' }) {
     try {
       const prompt = buildMedicalCoordinatorJsonPrompt(mergedContext, doctorsSnapshot)
 
-      const parsedResult = await fetchMedicalCoordinatorJson(prompt)
+      let parsedResult = await fetchMedicalCoordinatorJson(prompt)
       if (!parsedResult) {
-        throw new Error(ui.language === 'ar' ? 'لا يوجد مفتاح ذكاء اصطناعي في البيئة.' : 'No AI API key configured.')
+        parsedResult = localTriageResponse(mergedContext, nextTurns)
       }
 
       const parsed = parsedResult
       const contextLower = mergedContext.toLowerCase()
-      const hasHeadache = /صداع|وجع.*راس|headache/i.test(contextLower)
-      const hasBlur = /زغلل|زغللة|تشوش|blur|vision/i.test(contextLower)
-      const deniedSevere = /(?:لا|مش|مافيش|مفيش).{0,16}(?:غثيان|قيء|دوخة|ترجيع)|no.{0,12}(?:nausea|vomit|dizz)/i.test(contextLower)
-      const forcedDecisive = hasHeadache && hasBlur && deniedSevere
+      const hasAge = /\d+.*(سنة|سنه|عام|سن|age|yr|yo)/i.test(contextLower) || /(عمري|عمرى|عندي|عندى|سن).*\d+/i.test(contextLower)
+      const hasDuration = /(من|مدة|منذ|عندي|عندى).*(يوم|ساعة|شهر|أسبوع|اسبوع|دقائق|سنة|سنه)/i.test(contextLower) || /\d+.*(day|hour|week|month)/i.test(contextLower)
+      const hasSeverity = /(شدة|severity|degree|\d+\s*\/\s*10|10\/10|9\/10|8\/10|7\/10|6\/10|5\/10|4\/10|3\/10|2\/10|1\/10|لا يحتمل|مش قادر|تعبان|وجع.*جامد|وجع.*شديد|א|very painful|severe)/i.test(contextLower) || /(خفيف|متوسط|شديد|mild|moderate)/i.test(contextLower)
+      const hasEnoughInfo = hasAge || hasDuration || hasSeverity
+      const enoughTurns = chatTurns.length >= 3
 
       const aiAnswer = String(parsed?.medical_answer || '').trim()
       const specialtyHintRaw = String(parsed?.specialty_hint || parsed?.specialty || '').trim()
-      const specialtyHint = specialtyHintRaw || (forcedDecisive ? (ui.language === 'ar' ? 'باطنة عامة / رمد' : 'Internal Medicine / Ophthalmology') : '')
+      const specialtyHint = specialtyHintRaw || ''
       const recommendationReason = String(parsed?.recommendation_reason || '').trim()
-      const triageComplete = forcedDecisive || Boolean(parsed?.triage_complete)
+      const triageComplete = Boolean(parsed?.triage_complete) && hasEnoughInfo && enoughTurns
       const emergencyAlert = Boolean(parsed?.emergency_alert)
       const { doctors: recommendations, missingSpecialty } = resolveRecommendedDoctors(doctorsSnapshot, parsed)
-      const fallbackStructured =
-        ui.language === 'ar'
-          ? `ألف سلامة عليك يا فندم، إحنا هنا عشان نساعدك.\n\nاستلمت رسالتك وفهمت السياق، لكن محتاج توضيح صغير عشان التوجيه يبقى أدق: العمر + مدة الألم + هل البداية كانت مفاجئة ولا تدريجية.\n\nبعد التفاصيل دي هقدملك تحليل وترشيح تخصص مناسب لحالتك.`
-          : `I got your message and context. Please add age, pain duration, and whether onset was sudden or gradual for more accurate guidance.`
-      const decisiveFallback = ui.language === 'ar'
-        ? 'تمام يا فندم، الصورة وضحت. طالما مفيش غثيان أو دوخة مع الصداع والزغللة، فإحنا محتاجين نركز على فحص الباطنة العامة أو الرمد للتأكد من السبب بدقة. لحد ما تكشف، حاول تريح في إضاءة خافتة وابعد عن الموبايل وقيس ضغطك لو أمكن.'
-        : 'Got it. With headache + visual blur and no severe associated symptoms, we should prioritize Internal Medicine or Ophthalmology evaluation.'
-      const finalAnswer = aiAnswer || (forcedDecisive ? decisiveFallback : fallbackStructured)
+
+      const finalDoctors = triageComplete ? recommendations : []
+      const finalMissing = triageComplete ? missingSpecialty : ''
+      const finalAnswer = aiAnswer || (ui.language === 'ar'
+        ? 'أهلاً بيك. فهمت شكواك. عشان أقدر أساعدك بدقة، محتاج أعرف: العمر كام؟ ومن امتى الأعراض دي؟ وقد إيه شدتها من 1 لـ 10؟'
+        : 'I understand your complaint. To help accurately, I need: your age, how long you\'ve had these symptoms, and their severity from 1-10?')
 
       setChatTurns(prev => [...prev, { role: 'assistant', text: finalAnswer }])
       setResult({
         specialty: specialtyHint,
         reason: recommendationReason,
-        doctors: recommendations,
-        missingSpecialty,
+        doctors: finalDoctors,
+        missingSpecialty: finalMissing,
         triageComplete,
         emergencyAlert,
       })
@@ -3104,85 +3304,53 @@ function MedicalCoordinatorPanel({ ui, variant = 'compact' }) {
     }
   }
 
-  const isHero = variant === 'hero'
   const loadingLabels = ui.language === 'ar'
-    ? ['براجع الأعراض...', 'بربطها بالتخصصات...', 'بجهّز التوجيه الطبي...']
-    : ['Reviewing symptoms...', 'Matching specialties...', 'Preparing medical guidance...']
+    ? ['براجع الأعراض...', 'بربطها بالتخصصات...', 'بجهّز التوصية...']
+    : ['Reviewing symptoms...', 'Matching specialties...', 'Preparing recommendation...']
 
   return (
-    <div
-      className={
-        isHero
-          ? 'relative overflow-hidden rounded-[1.35rem] border border-violet-400/20 bg-gradient-to-br from-white via-violet-50/40 to-cyan-50/45 p-4 shadow-[0_20px_50px_rgba(124,58,237,0.12)] dark:border-violet-400/15 dark:from-slate-900 dark:via-violet-950/45 dark:to-slate-950 sm:p-5'
-          : 'relative overflow-hidden rounded-[1.6rem] border border-violet-300/30 bg-gradient-to-br from-violet-50/90 to-cyan-50/50 p-4 shadow-[0_14px_40px_rgba(124,58,237,0.14)] dark:border-violet-300/25 dark:from-violet-950/30 dark:to-slate-950/90'
-      }
-    >
-      <div
-        className="pointer-events-none absolute -end-16 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-fuchsia-400/20 to-cyan-400/15 blur-2xl dark:from-fuchsia-500/10 dark:to-cyan-500/10"
-        aria-hidden
-      />
-      <div className={`relative ${isHero ? 'flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between' : ''}`}>
-        <div>
-          <p className={`inline-flex items-center gap-1.5 uppercase tracking-[0.35em] text-violet-700/80 dark:text-violet-200/80 ${isHero ? 'text-[10px]' : 'text-xs'}`}>
-            <Sparkles className="size-3.5 shrink-0 text-violet-500 dark:text-violet-300" aria-hidden />
-            AI Chat
-          </p>
-          <p className={`font-semibold text-violet-950 dark:text-violet-50 ${isHero ? 'mt-1 text-lg sm:text-xl' : 'mt-1 text-sm'}`}>
-            {ui.language === 'ar' ? 'مساعدك الطبي الذكي — Hihya Care' : 'Your smart medical assistant — Hihya Care'}
-          </p>
-          <p className={`leading-snug text-slate-600 dark:text-slate-300 ${isHero ? 'mt-1 max-w-2xl text-xs sm:text-[13px]' : 'mt-2 text-xs'}`}>
-            {ui.language === 'ar'
-              ? 'اسأل عن الأعراض وسنقدّم توجيهاً طبياً منظماً بخطوات واضحة ولغة بسيطة.'
-              : 'Describe your symptoms and receive structured medical guidance in clear steps.'}
-          </p>
-        </div>
-        {isHero ? (
-          <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-lg border border-violet-300/30 bg-white/80 px-2 py-1 text-[10px] font-medium text-violet-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-violet-100 sm:mt-0">
-            <Stethoscope className="size-3.5 opacity-80" aria-hidden />
-            Gemini / Groq
-          </span>
-        ) : null}
-      </div>
-      {snapshotLoading ? (
-        <p className={`text-slate-500 dark:text-slate-400 ${isHero ? 'mt-3 text-xs' : 'mt-2 text-[11px]'}`}>
-          {ui.language === 'ar' ? 'جارٍ تحميل بيانات الأطباء…' : 'Loading doctors…'}
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700/60 dark:bg-slate-900/95">
+      <div className="flex items-center gap-2 mb-2">
+        <Stethoscope className="size-4 text-emerald-500" aria-hidden />
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-300">
+          {ui.language === 'ar' ? 'د. شريف — الفرز الطبي' : 'Dr. Sherif — Medical Triage'}
         </p>
+      </div>
+      <p className="text-sm font-semibold text-slate-800 dark:text-white">
+        {ui.language === 'ar' ? 'صف أعراضك وهرشحلك الدكتور المناسب' : 'Describe your symptoms, I\'ll recommend the right doctor'}
+      </p>
+      {snapshotLoading ? (
+        <p className="mt-2 text-xs text-slate-400">{ui.language === 'ar' ? 'جارٍ تحميل بيانات الأطباء…' : 'Loading doctors…'}</p>
       ) : null}
-      <form className={`space-y-2 ${isHero ? 'mt-4' : 'mt-3 space-y-2'}`} onSubmit={onAsk}>
+      <form className="mt-3 space-y-2" onSubmit={onAsk}>
         <textarea
           value={question}
           onChange={event => setQuestion(event.target.value)}
-          placeholder={ui.language === 'ar' ? 'اكتب سؤالك الطبي هنا...' : 'Write your medical question...'}
-          className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none ring-violet-400/0 transition focus:border-violet-400 focus:ring-2 focus:ring-violet-300/30 dark:border-white/10 dark:bg-slate-950/70 dark:text-white ${isHero ? 'min-h-[92px] text-sm sm:min-h-[100px]' : 'h-24 px-3 py-2 text-sm'}`}
+          placeholder={ui.language === 'ar' ? 'اكتب أعراضك هنا...' : 'Write your symptoms here...'}
+          className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800"
         />
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          className={
-            isHero
-              ? 'w-full rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(139,92,246,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_8px_28px_rgba(139,92,246,0.2)]'
-              : 'w-full rounded-xl border border-violet-300/30 bg-gradient-to-r from-violet-400 to-cyan-400 px-3 py-2 text-sm font-semibold text-slate-950 shadow-none transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-950'
-          }
+          className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-2.5 text-sm font-semibold text-white shadow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? loadingLabels[loadingStep] : (ui.language === 'ar' ? 'تحليل وترشيح أطباء' : 'Analyze & suggest doctors')}
+          {loading ? loadingLabels[loadingStep] : (ui.language === 'ar' ? 'تحليل وترشيح' : 'Analyze & suggest')}
         </button>
       </form>
 
       {error ? (
-        <p className={`rounded-xl border border-rose-300/40 bg-rose-50 px-3 py-2 text-rose-700 dark:bg-rose-500/10 dark:text-rose-100 ${isHero ? 'mt-3 text-xs' : 'mt-3 text-xs'}`}>
-          {error}
-        </p>
+        <p className="mt-3 rounded-xl border border-rose-400 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-900/60 dark:text-rose-200">{error}</p>
       ) : null}
 
       {chatTurns.length ? (
-        <div className={`mt-4 space-y-2 ${isHero ? 'max-h-[min(210px,30vh)] overflow-y-auto pr-1' : ''}`}>
+        <div className="mt-4 max-h-[300px] space-y-2.5 overflow-y-auto pr-1">
           {chatTurns.map((turn, idx) => (
             <div
               key={`${turn.role}-${idx}-${turn.text.slice(0, 20)}`}
-              className={`rounded-xl border px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap ${
+              className={`rounded-xl border px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                 turn.role === 'user'
-                  ? 'border-cyan-300/35 bg-cyan-50 text-cyan-900 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-100'
-                  : 'border-slate-200 bg-white text-slate-800 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-600/50 dark:bg-emerald-900/70 dark:text-emerald-50'
+                  : 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-600/50 dark:bg-slate-800/80 dark:text-gray-200'
               }`}
             >
               {turn.text}
@@ -3192,59 +3360,79 @@ function MedicalCoordinatorPanel({ ui, variant = 'compact' }) {
       ) : null}
 
       {result?.triageComplete ? (
-        <div className="mt-4 rounded-2xl border border-emerald-300/35 bg-gradient-to-br from-emerald-50/95 to-cyan-50/50 p-4 text-emerald-950 shadow-sm dark:border-emerald-400/20 dark:from-emerald-950/40 dark:to-slate-950/70 dark:text-emerald-50">
-          <p className="text-sm font-semibold">{ui.language === 'ar' ? 'توصية شفاء' : 'Shifa Recommendation'}</p>
-          <p className="mt-2 text-xs">
-            {ui.language === 'ar'
-              ? `التخصص المقترح: ${result.specialty || 'باطنة عامة'}`
-              : `Suggested specialty: ${result.specialty || 'Internal Medicine'}`}
-          </p>
-          <p className="mt-1 text-xs">
-            {ui.language === 'ar'
-              ? `سبب الترشيح: ${result.reason || 'بناءً على نمط الأعراض ومدتها والأعراض المصاحبة.'}`
-              : `Reason: ${result.reason || 'Based on symptom pattern, duration, and associated symptoms.'}`}
-          </p>
-          {result.emergencyAlert ? (
-            <p className="mt-2 rounded-lg border border-rose-300/50 bg-rose-50/95 px-3 py-2 text-xs font-semibold text-rose-900 dark:border-rose-400/35 dark:bg-rose-500/15 dark:text-rose-100">
-              {ui.language === 'ar'
-                ? 'لو القيء مستمر أو الصداع زاد جداً بشكل مفاجئ، التوجه للطوارئ فوراً هو الخيار الأصح.'
-                : 'If vomiting persists or headache suddenly worsens, emergency care is the safest option.'}
-            </p>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-700/60 dark:bg-slate-900/95">
+          {result.specialty ? (
+            <div className="mb-3 flex items-center gap-2">
+              <span className="rounded-md border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:border-emerald-600/50 dark:bg-emerald-900/60 dark:text-emerald-300">
+                {result.specialty}
+              </span>
+              {result.emergencyAlert ? (
+                <span className="rounded-md border border-rose-300 bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-800 dark:border-rose-600/50 dark:bg-rose-900/60 dark:text-rose-300">
+                  طوارئ
+                </span>
+              ) : null}
+            </div>
           ) : null}
 
-          {result.missingSpecialty ? (
-            <p className="mt-2 rounded-lg border border-amber-300/50 bg-amber-50/95 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-400/35 dark:bg-amber-500/15 dark:text-amber-50">
+          {result.reason ? (
+            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">{result.reason}</p>
+          ) : null}
+
+          {result.emergencyAlert ? (
+            <div className="mb-3 rounded-lg border border-rose-300 bg-rose-100 px-3 py-2 text-xs font-medium text-rose-800 dark:border-rose-600/50 dark:bg-rose-900/60 dark:text-rose-200">
+              ⚠️ {ui.language === 'ar' ? 'لازم تتوجه لأقرب مستشفى فوراً' : 'Go to the nearest emergency room immediately'}
+            </div>
+          ) : result.missingSpecialty ? (
+            <p className="mb-3 rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-xs text-amber-800 dark:border-amber-600/50 dark:bg-amber-900/60 dark:text-amber-200">
               {ui.language === 'ar'
-                ? `يفضل البدء بتخصص باطنة عامة لعمل الفحوصات الأولية، ومن ثم التوجه للمتخصص (${result.missingSpecialty}).`
-                : `Start with Internal Medicine for initial tests, then proceed to ${result.missingSpecialty}.`}
+                ? `ابدأ بباطنة عامة للفحوصات الأولية، ثم توجه لـ ${result.missingSpecialty}`
+                : `Start with Internal Medicine, then proceed to ${result.missingSpecialty}`}
             </p>
           ) : result.doctors?.length ? (
-            <div className="mt-3 space-y-2">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                {ui.language === 'ar' ? 'الأطباء المقترحون:' : 'Recommended doctors:'}
+              </p>
               {result.doctors.map(doctor => (
-                <div key={`final-rec-${doctor.id}`} className="rounded-xl border border-emerald-300/35 bg-white/85 p-3 dark:border-emerald-400/20 dark:bg-slate-900/50">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {doctor.name}
-                    <span className="ms-2 text-xs font-normal text-emerald-800 dark:text-emerald-200">{doctor.specialty}</span>
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                    {ui.language === 'ar' ? `الكشف: ${doctor.price || '—'} جنيه` : `Fee: ${doctor.price || '—'} EGP`}
-                  </p>
-                  <Link
-                    to={`/book/${doctor.id}`}
-                    className="mt-2 inline-flex rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-900 transition hover:bg-emerald-500/25 dark:text-emerald-100"
-                  >
-                    {ui.language === 'ar' ? 'احجز الآن في ههيا' : 'Book now in Hihya'}
-                  </Link>
+                <div key={`rec-${doctor.id}`} className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-600/50 dark:bg-slate-800/80">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate dark:text-gray-100">{doctor.name}</p>
+                      <p className="text-xs text-emerald-600/90 dark:text-emerald-400/90">{doctor.specialty}</p>
+                      {doctor.secret_code ? (
+                        <p className="mt-0.5 text-[11px] font-mono text-slate-400">كود: {doctor.secret_code}</p>
+                      ) : null}
+                      {doctor.price ? (
+                        <p className="mt-0.5 text-xs text-slate-400">{ui.language === 'ar' ? `الكشف: ${doctor.price}` : `Fee: ${doctor.price}`}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <Link
+                      to={`/doctor/${doctor.id}`}
+                      className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-200 dark:border-slate-500/40 dark:bg-slate-700/60 dark:text-gray-200 dark:hover:bg-slate-700"
+                    >
+                      {ui.language === 'ar' ? 'عرض البروفايل' : 'View Profile'}
+                    </Link>
+                    <Link
+                      to={`/book/${doctor.id}`}
+                      className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:brightness-110"
+                    >
+                      {ui.language === 'ar' ? 'احجز الآن' : 'Book Now'}
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           ) : null}
 
-          <p className="mt-3 text-xs font-semibold text-emerald-900 dark:text-emerald-100">
-            {ui.language === 'ar'
-              ? 'تحب أحجزلك عند أقرب دكتور باطنة متاح حالياً في ههيا؟'
-              : 'Would you like me to book the nearest available Internal Medicine doctor in Hihya now?'}
-          </p>
+          {!result.emergencyAlert && result.doctors?.length ? (
+            <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+              {ui.language === 'ar'
+                ? 'تقدر تشوف البروفايل أو تحجز موعد مباشرة من الأزرار فوق'
+                : 'You can view the profile or book an appointment directly'}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -3261,26 +3449,40 @@ function useAppointmentsByDoctorId(doctorId, language) {
         return { appointments: [], notice: '' }
       }
 
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('id, patient_name, phone, appointment_date, time, status, doctor_id')
-        .eq('doctor_id', doctorId)
-        .order('appointment_date', { ascending: true })
+      try {
+        const { data, error } = await supabase
+          .from('appointments')
+          .select('id, patient_name, patient_phone, appointment_date, appointment_time, status, doctor_id, symptoms')
+          .eq('doctor_id', doctorId)
+          .order('appointment_date', { ascending: true })
 
-      if (error || !Array.isArray(data)) {
-        return {
-          appointments: createFallbackAppointments(doctorId, language),
-          notice: getText(language, 'appointmentsFallbackNotice'),
+        if (!error && Array.isArray(data)) {
+          const remoteAppointments = data.map((appointment, index) => ({
+            ...appointment,
+            id: appointment.id ?? `${appointment.doctor_id}-${index}`,
+            status: appointment.status || 'Pending',
+            appointment_date: appointment.appointment_date || new Date().toISOString(),
+            appointment_time: appointment.appointment_time || '09:00',
+            phone: appointment.patient_phone || '',
+            fees: Number(appointment.fees ?? 0) || 0,
+          }))
+
+          const localAppointments = getLocalAppointmentsForDoctor(doctorId).map((appointment, index) => ({
+            ...appointment,
+            id: appointment.id || `local-${doctorId}-${index}`,
+            status: appointment.status || 'Pending',
+            appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
+            time: appointment.time || '09:00',
+          }))
+
+          const mergedAppointments = [...remoteAppointments]
+          const existingIds = new Set(remoteAppointments.map(appointment => appointment.id))
+          mergedAppointments.push(...localAppointments.filter(appointment => !existingIds.has(appointment.id)))
+          mergedAppointments.sort((left, right) => parseAppointmentDate(left).getTime() - parseAppointmentDate(right).getTime())
+
+          return { appointments: mergedAppointments, notice: '' }
         }
-      }
-
-      const remoteAppointments = data.map((appointment, index) => ({
-        ...appointment,
-        id: appointment.id ?? `${appointment.doctor_id}-${index}`,
-        status: appointment.status || 'Pending',
-        appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
-        time: appointment.time || '09:00',
-      }))
+      } catch (_) {}
 
       const localAppointments = getLocalAppointmentsForDoctor(doctorId).map((appointment, index) => ({
         ...appointment,
@@ -3289,17 +3491,8 @@ function useAppointmentsByDoctorId(doctorId, language) {
         appointment_date: appointment.appointment_date || appointment.time || new Date().toISOString(),
         time: appointment.time || '09:00',
       }))
-
-      const mergedAppointments = [...remoteAppointments]
-      const existingIds = new Set(remoteAppointments.map(appointment => appointment.id))
-      mergedAppointments.push(...localAppointments.filter(appointment => !existingIds.has(appointment.id)))
-
-      mergedAppointments.sort((left, right) => parseAppointmentDate(left).getTime() - parseAppointmentDate(right).getTime())
-
-      return {
-        appointments: mergedAppointments,
-        notice: '',
-      }
+      localAppointments.sort((left, right) => parseAppointmentDate(left).getTime() - parseAppointmentDate(right).getTime())
+      return { appointments: localAppointments, notice: getText(language, 'appointmentsFallbackNotice') }
     },
     staleTime: 45_000,
     refetchInterval: 60_000,
@@ -3318,6 +3511,23 @@ function useAppointmentsByDoctorId(doctorId, language) {
       }
     })
   }
+
+  useEffect(() => {
+    if (!doctorId) return
+    if (typeof supabase.channel !== 'function') return
+
+    const channel = supabase
+      .channel(`appointments-realtime-${doctorId}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments', filter: `doctor_id=eq.${doctorId}` },
+        () => {
+          queryCache.invalidateQueries({ queryKey: ['appointments', doctorId, language] })
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [doctorId, language, queryCache])
 
   return {
     appointments: appointmentsQuery.data?.appointments || [],
@@ -3449,6 +3659,9 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   const queryCache = useQueryClient()
   const [patientName, setPatientName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [symptoms, setSymptoms] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState([])
+  const [intakeData, setIntakeData] = useState({ age: '', gender: '', symptoms: '' })
   const [appointmentDate, setAppointmentDate] = useState(() => {
     if (!slotParam) {
       return toDatetimeLocalValue(new Date())
@@ -3557,88 +3770,84 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
       return
     }
 
-    try {
-      setStatus('loading')
-      setFeedback(ui.language === 'ar' ? 'جارٍ تأكيد الموعد...' : 'Securing appointment...')
+    const trimmedSymptoms = symptoms.trim()
+    const appointmentTime = appointmentIso ? appointmentIso.slice(11, 16) : null
+    const attachmentNames = uploadedFiles.map(f => f.name)
+    const attachments = await filesToAttachments(uploadedFiles)
+    const localAppointment = createLocalAppointment(doctorId, trimmedName, trimmedPhone, appointmentIso, trimmedSymptoms)
+    localAppointment.attachments = attachments
+    localAppointment.patient_age = intakeData.age
+    localAppointment.patient_gender = intakeData.gender
+    localAppointment.intake_symptoms = intakeData.symptoms
 
+    // Save locally FIRST so dashboard always sees it
+    saveLocalAppointment(localAppointment)
+    void queryCache.invalidateQueries({ queryKey: ['appointments', doctorId] })
+
+    setStatus('loading')
+    setFeedback(ui.language === 'ar' ? 'جارٍ تأكيد الموعد...' : 'Securing appointment...')
+
+    // Also try saving to Supabase (best-effort)
+    try {
       const { error } = await supabase.from('appointments').insert([
         {
           patient_name: trimmedName,
-          phone: trimmedPhone,
+          patient_phone: trimmedPhone,
           doctor_id: doctorId,
           patient_id: session?.user?.id ?? null,
           appointment_date: appointmentIso,
+          appointment_time: appointmentTime,
           status: 'Pending',
+          symptoms: [
+            intakeData.age ? `العمر: ${intakeData.age}` : '',
+            intakeData.gender ? `النوع: ${intakeData.gender}` : '',
+            trimmedSymptoms,
+            attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
+          ].filter(Boolean).join('\n') || null,
         },
       ])
-
-      if (error) {
-        throw error
-      }
-
-      void queryCache.invalidateQueries({ queryKey: ['appointments', doctorId] })
-
-      const whatsappApiUrl = String(import.meta.env.VITE_WHATSAPP_API_URL || '').trim()
-      if (selectedDoctor.phone_number && whatsappApiUrl) {
-        const payload = JSON.stringify({
-          doctor_id: selectedDoctor.id,
-          doctor_name: selectedDoctor.name,
-          doctor_phone: selectedDoctor.phone_number,
-          patient_name: trimmedName,
-          patient_phone: trimmedPhone,
-          appointment_date: appointmentIso,
-          message: `New booking from ${trimmedName} for ${selectedDoctor.name}`,
-        })
-        const signal =
-          typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
-            ? AbortSignal.timeout(4000)
-            : undefined
-        void fetch(whatsappApiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload,
-          ...(signal ? { signal } : {}),
-        }).catch(() => {})
-      }
-
-      navigate('/booking-success', {
-        state: {
-          patientName: trimmedName,
-          patientPhone: trimmedPhone,
-          appointmentIso,
-          doctorId,
-          doctorName: selectedDoctor.name,
-          specialty: selectedDoctor.specialty,
-          clinicAddress: selectedDoctor.clinicLocation || '',
-          clinicPhone: selectedDoctor.phone_number || '',
-          mapsUrl: selectedDoctor.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
-          bookingRef: `HC-${Date.now().toString(36).toUpperCase()}`,
-        },
-      })
-    } catch (error) {
-      const localAppointment = saveLocalAppointment(
-        createLocalAppointment(doctorId, trimmedName, trimmedPhone, appointmentIso),
-      )
-      void queryCache.invalidateQueries({ queryKey: ['appointments', doctorId] })
-      const fallbackIso =
-        typeof localAppointment.appointment_date === 'string'
-          ? localAppointment.appointment_date
-          : new Date(localAppointment.appointment_date || Date.now()).toISOString()
-      navigate('/booking-success', {
-        state: {
-          patientName: trimmedName,
-          patientPhone: trimmedPhone,
-          appointmentIso: fallbackIso,
-          doctorId,
-          doctorName: selectedDoctor.name,
-          specialty: selectedDoctor.specialty,
-          clinicAddress: selectedDoctor.clinicLocation || '',
-          clinicPhone: selectedDoctor.phone_number || '',
-          mapsUrl: selectedDoctor.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
-          bookingRef: `HC-${Date.now().toString(36).toUpperCase()}`,
-        },
-      })
+      if (error) console.error('[Booking] Supabase insert error:', error)
+    } catch (supaErr) {
+      console.error('[Booking] Supabase insert exception:', supaErr)
     }
+
+    const whatsappApiUrl = String(import.meta.env.VITE_WHATSAPP_API_URL || '').trim()
+    if (selectedDoctor.phone_number && whatsappApiUrl) {
+      const payload = JSON.stringify({
+        doctor_id: selectedDoctor.id,
+        doctor_name: selectedDoctor.name,
+        doctor_phone: selectedDoctor.phone_number,
+        patient_name: trimmedName,
+        patient_phone: trimmedPhone,
+        appointment_date: appointmentIso,
+        message: `New booking from ${trimmedName} for ${selectedDoctor.name}`,
+      })
+      const signal =
+        typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+          ? AbortSignal.timeout(4000)
+          : undefined
+      void fetch(whatsappApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        ...(signal ? { signal } : {}),
+      }).catch(() => {})
+    }
+
+    navigate('/booking-success', {
+      state: {
+        patientName: trimmedName,
+        patientPhone: trimmedPhone,
+        appointmentIso,
+        doctorId,
+        doctorName: selectedDoctor.name,
+        specialty: selectedDoctor.specialty,
+        clinicAddress: selectedDoctor.clinicLocation || '',
+        clinicPhone: selectedDoctor.phone_number || '',
+        mapsUrl: selectedDoctor.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
+        bookingRef: `HC-${Date.now().toString(36).toUpperCase()}`,
+      },
+    })
   }
 
   const isLoading = status === 'loading'
@@ -3754,6 +3963,20 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
               </label>
 
               <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{ui.language === 'ar' ? 'الأعراض (اختياري)' : 'Symptoms (optional)'}</span>
+                <div className="group rounded-2xl border border-cyan-300/15 bg-white px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70">
+                  <textarea
+                    className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 resize-none"
+                    value={symptoms}
+                    onChange={event => setSymptoms(event.target.value)}
+                    placeholder={ui.language === 'ar' ? 'صِف الأعراض التي تشعر بها...' : 'Describe your symptoms...'}
+                    rows={2}
+                    disabled={isLoading}
+                  />
+                </div>
+              </label>
+
+              <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('bookingAppointmentDate')}</span>
                 <div className="group rounded-2xl border border-cyan-300/15 bg-white px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70">
                   <input
@@ -3775,6 +3998,8 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
                   whatsappPhone={selectedDoctor.phone_number || ''}
                   patientName={patientName}
                   doctorName={selectedDoctor.name}
+                  onFilesChange={setUploadedFiles}
+                  onIntakeChange={setIntakeData}
                 />
               ) : null}
 
@@ -4134,268 +4359,252 @@ function ReviewPage({ ui }) {
   )
 }
 
+function useDoctorByUserId(uid, language) {
+  const [doctor, setDoctor] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    let active = true
+    if (!uid) {
+      setDoctor(null); setLoading(false); setNotice('')
+      return () => { active = false }
+    }
+
+    const loadDoctor = async () => {
+      setLoading(true); setNotice('')
+      const { data, error } = await supabase
+        .from('doctors')
+        .select('*')
+        .eq('user_id', uid)
+        .maybeSingle()
+
+      if (!active) return
+      if (data) {
+        setDoctor(localizeDoctor(language, makeDoctorFromRow(data)))
+      }
+      // no error/not found — just means unlinked
+      setLoading(false)
+    }
+
+    loadDoctor()
+    return () => { active = false }
+  }, [uid, language])
+
+  return { doctor, loading, notice }
+}
+
 function DashboardAccessPage({ ui }) {
   const t = key => getText(ui.language, key)
   const navigate = useNavigate()
+  const isAr = ui.language === 'ar'
   const [secretCode, setSecretCode] = useState('')
   const [submittedCode, setSubmittedCode] = useState('')
   const [actionNotice, setActionNotice] = useState('')
   const [authNotice, setAuthNotice] = useState('')
+  const [linkNotice, setLinkNotice] = useState('')
   const [loginEmail, setLoginEmail] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
   const [session, setSession] = useState(null)
+  const [showLogin, setShowLogin] = useState(false)
+  const { doctor: authDoctor, loading: authDoctorLoading } = useDoctorByUserId(session?.user?.id, ui.language)
   const { doctor, loading: doctorLoading, notice: doctorNotice } = useDoctorByCode(submittedCode, ui.language)
-  const { appointments, setAppointments, loading: appointmentsLoading, notice: appointmentsNotice } = useAppointmentsByDoctorId(doctor?.id, ui.language)
+  const { appointments, setAppointments, loading: appointmentsLoading, notice: appointmentsNotice } = useAppointmentsByDoctorId(doctor?.id || authDoctor?.id, ui.language)
 
+  const resolvedDoctor = authDoctor || doctor
   const resolvedAppointments = appointments || []
+  const dataReady = resolvedDoctor && !appointmentsLoading
 
+  // Session management
   useEffect(() => {
     let active = true
-
     const loadSession = async () => {
       const { data } = await supabase.auth.getSession()
-
-      if (active) {
-        setSession(data?.session || null)
-      }
+      if (active) setSession(data?.session || null)
     }
-
     loadSession()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (active) {
-        setSession(nextSession || null)
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) setSession(nextSession || null)
     })
-
-    return () => {
-      active = false
-      subscription?.unsubscribe()
-    }
+    return () => { active = false; subscription?.unsubscribe() }
   }, [])
 
-  // Prefill secret code from URL query if provided (e.g. ?code=HC-2026 or ?doctor=dr-mohamed-alafandi)
+  // Prefill from URL
   useEffect(() => {
     try {
       if (typeof window === 'undefined') return
       const params = new URLSearchParams(window.location.search)
       const codeParam = params.get('code') || params.get('secret_code')
       const doctorParam = params.get('doctor') || params.get('doctorId')
-
-      if (codeParam) {
-        setSecretCode(codeParam)
-        // immediately submit to load dashboard
-        setSubmittedCode(String(codeParam).trim())
-      } else if (doctorParam) {
-        const fallback = createFallbackDoctor(doctorParam)
-        if (fallback && fallback.secret_code) {
-          setSecretCode(fallback.secret_code)
-          setSubmittedCode(String(fallback.secret_code).trim())
-        }
+      if (codeParam) { setSecretCode(codeParam); setSubmittedCode(String(codeParam).trim()) }
+      else if (doctorParam) {
+        const fb = createFallbackDoctor(doctorParam)
+        if (fb?.secret_code) { setSecretCode(fb.secret_code); setSubmittedCode(String(fb.secret_code).trim()) }
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
   }, [])
 
   const handleLogin = async event => {
     event.preventDefault()
-
     const email = loginEmail.trim()
-    if (!email) {
-      setAuthNotice(ui.language === 'ar' ? 'يرجى إدخال البريد الإلكتروني.' : 'Please enter an email address.')
-      return
-    }
-
+    if (!email) { setAuthNotice(isAr ? 'يرجى إدخال البريد الإلكتروني.' : 'Please enter an email address.'); return }
     try {
-      setLoginLoading(true)
-      setAuthNotice('')
-
-      const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined
+      setLoginLoading(true); setAuthNotice('')
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+        options: { emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined },
       })
-
-      if (error) {
-        throw error
-      }
-
+      if (error) throw error
       setAuthNotice(t('dashboardOtpSent'))
     } catch (error) {
       setAuthNotice(error instanceof Error ? error.message : t('dashboardOtpError'))
-    } finally {
-      setLoginLoading(false)
-    }
+    } finally { setLoginLoading(false) }
   }
 
-  const handleSubmit = event => {
+  const handleSubmit = async event => {
     event.preventDefault()
-    setSubmittedCode(secretCode.trim())
+    const code = secretCode.trim()
+    if (!code) return
+    setSubmittedCode(code)
     setActionNotice('')
+    setLinkNotice('')
+    if (session?.user?.id) {
+      setLinkLoading(true)
+      try {
+        const { data: doc } = await supabase.from('doctors').select('id, user_id').eq('secret_code', code).maybeSingle()
+        if (doc) {
+          const { error: updateError } = await supabase.from('doctors').update({ user_id: session.user.id }).eq('id', doc.id)
+          if (updateError) throw updateError
+          setLinkNotice(isAr ? `✅ تم الربط. المرة الجاية ادخل بالإيميل مباشرة.` : `✅ Linked. Next time just sign in with email.`)
+        }
+      } catch { setLinkNotice(isAr ? '❌ فشل الربط. استخدم الكود للدخول.' : '❌ Link failed.') }
+      setLinkLoading(false)
+    }
   }
 
   const handleToggleStatus = async appointment => {
-    if (!doctor?.id) {
-      return
-    }
-
+    if (!resolvedDoctor?.id) return
     const nextStatus = cycleAppointmentStatus(appointment.status)
     const previousStatus = appointment.status
-    const isLocalAppointment = String(appointment.id || '').startsWith('local-') || appointment.source === 'local'
-
-    if (isLocalAppointment) {
-      setAppointments(previous => previous.map(item => (item.id === appointment.id ? { ...item, status: nextStatus } : item)))
+    const isLocal = String(appointment.id || '').startsWith('local-') || appointment.source === 'local'
+    if (isLocal) {
+      setAppointments(prev => prev.map(item => (item.id === appointment.id ? { ...item, status: nextStatus } : item)))
       updateLocalAppointmentStatus(appointment.id, nextStatus)
       setActionNotice(`${t('statusUpdated')}: ${appointment.patient_name}`)
       return
     }
-
-    setAppointments(previous => previous.map(item => (item.id === appointment.id ? { ...item, status: nextStatus } : item)))
+    setAppointments(prev => prev.map(item => (item.id === appointment.id ? { ...item, status: nextStatus } : item)))
     setActionNotice('')
-
     try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: nextStatus })
-        .eq('id', appointment.id)
-
-      if (error) {
-        throw error
-      }
-
+      const { error } = await supabase.from('appointments').update({ status: nextStatus }).eq('id', appointment.id)
+      if (error) throw error
       setActionNotice(`${t('statusUpdated')}: ${appointment.patient_name}`)
     } catch (error) {
-      setAppointments(previous => previous.map(item => (item.id === appointment.id ? { ...item, status: previousStatus } : item)))
+      setAppointments(prev => prev.map(item => (item.id === appointment.id ? { ...item, status: previousStatus } : item)))
       setActionNotice(error instanceof Error ? error.message : t('errorTitle'))
     }
   }
 
-  return (
-    <AppShell ui={ui}>
-      <section className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="space-y-6 rounded-[2rem] border border-white/40 bg-white/70 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-800/60">
-          <MedicalCoordinatorPanel ui={ui} />
-
-          <div className="rounded-[1.6rem] border border-white/40 bg-white/70 p-5 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05),0_4px_6px_-2px_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-white/5">
-            <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardLogin')}</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">{t('dashboardAuthTitle')}</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('dashboardAuthIntro')}</p>
-
-            <form className="mt-5 space-y-3" onSubmit={handleLogin}>
-              <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
-                value={loginEmail}
-                onChange={event => setLoginEmail(event.target.value)}
-                placeholder={t('dashboardEmailPlaceholder')}
-                autoComplete="email"
-                inputMode="email"
-              />
-              <button
-                type="submit"
-                disabled={loginLoading}
-                className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_30px_rgba(34,211,238,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {loginLoading ? t('finalizingBooking') : t('sendMagicLink')}
-              </button>
-            </form>
-
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-500 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-300">
-              {session ? t('dashboardSessionActive') : ui.language === 'ar' ? 'لم يتم العثور على جلسة بعد. يمكن متابعة رمز الطبيب أثناء انتظار البريد الإلكتروني.' : 'No active session yet. You can continue with the doctor code while the magic link is delivered.'}
+  // No doctor yet — show full-screen code entry
+  if (!resolvedDoctor) {
+    return (
+      <AppShell ui={ui}>
+        <div className="flex min-h-[85vh] items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-[2.5rem] border border-white/40 bg-white/70 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.1)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-800/70">
+            <div className="text-center">
+              <HeartPulse className="mx-auto h-12 w-12 text-cyan-500" />
+              <p className="mt-4 text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">Hihya Care</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-900 dark:text-white">
+                {isAr ? 'لوحة تحكم الأطباء' : 'Doctor Dashboard'}
+              </h1>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                {isAr ? 'أدخل رمز الطبيب للبدء' : 'Enter your doctor code to start'}
+              </p>
             </div>
 
-            {authNotice ? (
-              <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">
-                {authNotice}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-[1.6rem] border border-white/40 bg-white/70 p-5 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05),0_4px_6px_-2px_rgba(0,0,0,0.02)] dark:border-white/10 dark:bg-white/5">
-            <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardCodeGateTitle')}</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">{t('privateDoctorCode')}</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('dashboardCodeGateIntro')}</p>
-            <p className="mt-3 text-xs leading-6 text-slate-500 dark:text-slate-400">{t('dashboardCodeHelper')}</p>
-
-            <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+            <form className="mt-8 space-y-3" onSubmit={handleSubmit}>
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-lg font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
                 value={secretCode}
                 onChange={event => setSecretCode(event.target.value)}
-                placeholder={t('dashboardCodePlaceholder')}
+                placeholder={isAr ? 'مثال: HC-2026' : 'e.g. HC-2026'}
                 autoComplete="off"
               />
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_30px_rgba(34,211,238,0.24)] transition hover:-translate-y-0.5"
-              >
-                {t('unlockDashboard')}
+              <button type="submit"
+                className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_30px_rgba(34,211,238,0.24)] transition hover:-translate-y-0.5">
+                {isAr ? 'دخول' : 'Enter'}
               </button>
             </form>
 
-            <div className="mt-5 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/60">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{t('language')}</span>
-                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-900/60">
-                  <button
-                    type="button"
-                    onClick={() => ui.setLanguage('en')}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${ui.language === 'en' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-500 dark:text-slate-300'}`}
-                  >
-                    {t('english')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => ui.setLanguage('ar')}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${ui.language === 'ar' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-500 dark:text-slate-300'}`}
-                  >
-                    {t('arabic')}
-                  </button>
-                </div>
-              </div>
+            {doctorNotice ? (
+              <div className="mt-4 rounded-2xl border border-rose-300/30 bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-100">{doctorNotice}</div>
+            ) : null}
 
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
-                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-900/60">
-                  <button
-                    type="button"
-                    onClick={() => ui.setTheme('light')}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${ui.theme === 'light' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-500 dark:text-slate-300'}`}
-                  >
-                    {t('light')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => ui.setTheme('dark')}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${ui.theme === 'dark' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-500 dark:text-slate-300'}`}
-                  >
-                    {t('dark')}
-                  </button>
-                </div>
-              </div>
+            <div className="mt-6 text-center">
+              <button type="button" onClick={() => setShowLogin(!showLogin)}
+                className="text-xs text-cyan-600 hover:text-cyan-800 dark:text-cyan-300 dark:hover:text-cyan-100">
+                {showLogin
+                  ? (isAr ? '← رجوع لرمز الطبيب' : '← Back to doctor code')
+                  : (isAr ? 'تسجيل دخول بالبريد الإلكتروني' : 'Sign in with email')}
+              </button>
             </div>
 
-            {doctorNotice || actionNotice ? (
-              <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">
-                {doctorNotice || actionNotice}
-              </div>
+            {showLogin ? (
+              <form className="mt-4 space-y-3 border-t border-slate-200 pt-4 dark:border-white/10" onSubmit={handleLogin}>
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                  value={loginEmail}
+                  onChange={event => setLoginEmail(event.target.value)}
+                  placeholder={isAr ? 'البريد الإلكتروني' : 'Email address'}
+                  autoComplete="email" inputMode="email"
+                />
+                <button type="submit" disabled={loginLoading}
+                  className="flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-70 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  {loginLoading ? t('finalizingBooking') : (isAr ? 'إرسال رابط الدخول' : 'Send magic link')}
+                </button>
+                {authNotice ? (
+                  <div className="rounded-xl border border-emerald-300/30 bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">{authNotice}</div>
+                ) : null}
+                <p className="text-[10px] text-slate-400">
+                  {isAr ? 'مرة واحدة بس. بعدها تدخل مباشرة.' : 'One-time setup. Then you log in directly.'}
+                </p>
+              </form>
             ) : null}
+
+            <div className="mt-6 flex items-center justify-center gap-3 text-[10px] text-slate-400">
+              <button type="button" onClick={() => ui.setLanguage('en')} className="hover:text-slate-600">EN</button>
+              <span>·</span>
+              <button type="button" onClick={() => ui.setLanguage('ar')} className="hover:text-slate-600">AR</button>
+              <span>·</span>
+              <button type="button" onClick={() => ui.setTheme(ui.theme === 'dark' ? 'light' : 'dark')} className="hover:text-slate-600">
+                {ui.theme === 'dark' ? (isAr ? 'فاتح' : 'Light') : (isAr ? 'داكن' : 'Dark')}
+              </button>
+            </div>
           </div>
+        </div>
+      </AppShell>
+    )
+  }
 
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
-          >
-            {t('backToDoctors')}
-          </button>
-        </aside>
+  // Loading state
+  if (appointmentsLoading && !dataReady) {
+    return (
+      <AppShell ui={ui}>
+        <div className="flex min-h-[85vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
+        </div>
+      </AppShell>
+    )
+  }
 
+  // Doctor data ready — show the dashboard
+  return (
+    <AppShell ui={ui}>
+      <section className="min-h-[80vh]">
         <DoctorDashboardPage
-          doctor={doctor}
-          doctorLoading={doctorLoading}
+          doctor={resolvedDoctor}
+          doctorLoading={false}
           appointments={resolvedAppointments}
           setAppointments={setAppointments}
           appointmentsLoading={appointmentsLoading}
@@ -4408,330 +4617,657 @@ function DashboardAccessPage({ ui }) {
   )
 }
 
-function DoctorDashboardPage({ doctor, doctorLoading, appointments, appointmentsLoading, appointmentsNotice, ui, onToggleStatus }) {
+const STATUS_CYCLE = ['Pending', 'In Clinic', 'Completed']
+const STATUS_CONFIG = {
+  Pending: { label: 'في الانتظار', className: 'border-amber-300/30 bg-amber-500/10 text-amber-700 dark:text-amber-200', order: 0 },
+  'In Clinic': { label: 'مع الطبيب', className: 'border-blue-300/30 bg-blue-500/10 text-blue-700 dark:text-blue-200', order: 1 },
+  Completed: { label: 'تم', className: 'border-emerald-300/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200', order: 2 },
+  Cancelled: { label: 'ملغي', className: 'border-rose-300/30 bg-rose-500/10 text-rose-700 dark:text-rose-200', order: -1 },
+  'no_show': { label: 'غائب', className: 'border-slate-300/30 bg-slate-500/10 text-slate-600 dark:text-slate-200', order: -1 },
+}
+
+function openWhatsApp(phone, message) {
+  const n = normalizePhoneForWa(phone)
+  if (n) window.open(`https://wa.me/${n}?text=${encodeURIComponent(message)}`, '_blank')
+}
+
+const DELAY_TEMPLATES = [
+  { delay: 10, label: '١٠ دقائق', msg: (p, d) => `السلام عليكم ${p} 🌿 موعدك مع د. ${d} اتأخر ١٠ دقائق. نشكر تفهمك.` },
+  { delay: 15, label: '١٥ دقيقة', msg: (p, d) => `أهلاً ${p} 🌿 د. ${d} اعتذر عن التأخير ١٥ دقيقة.` },
+  { delay: 30, label: '٣٠ دقيقة', msg: (p, d) => `عذراً ${p} 🌿 الموعد مع د. ${d} اتأخر نصف ساعة.` },
+  { delay: 45, label: '٤٥ دقيقة', msg: (p, d) => `${p} المحترم/ة 🌿 نأسف للتأخير. د. ${d} سينهي الحالة بعد ٤٥ دقيقة.` },
+]
+
+const EXPENSE_DATA = { rent: 8500, electricity: 1800, water: 400, supplies: 3200, staff: 12000, maintenance: 1500, other: 2000 }
+const MONTHLY_EXPENSES_TOTAL = Object.values(EXPENSE_DATA).reduce((a, b) => a + b, 0)
+
+const DIAGNOSIS_DATA = [
+  { name: 'باطنة', value: 40, color: '#22d3ee' },
+  { name: 'أنفلونزا', value: 20, color: '#10b981' },
+  { name: 'ضغط الدم', value: 15, color: '#f59e0b' },
+  { name: 'صداع نصفي', value: 13, color: '#8b5cf6' },
+  { name: 'حساسية', value: 8, color: '#ef4444' },
+  { name: 'أخرى', value: 4, color: '#64748b' },
+]
+
+const PEAK_HOURS = [
+  { hour: '8ص', patients: 2 }, { hour: '9ص', patients: 5 }, { hour: '10ص', patients: 8 },
+  { hour: '11ص', patients: 7 }, { hour: '12م', patients: 6 }, { hour: '1م', patients: 3 },
+  { hour: '2م', patients: 4 }, { hour: '3م', patients: 6 }, { hour: '4م', patients: 9 },
+  { hour: '5م', patients: 7 }, { hour: '6م', patients: 4 }, { hour: '7م', patients: 2 },
+]
+
+const MONTHLY_REVENUE = [
+  { month: 'نوفمبر', revenue: 28500, target: 30000 },
+  { month: 'ديسمبر', revenue: 32200, target: 30000 },
+  { month: 'يناير', revenue: 25800, target: 32000 },
+  { month: 'فبراير', revenue: 34100, target: 32000 },
+  { month: 'مارس', revenue: 41800, target: 35000 },
+  { month: 'إبريل', revenue: 39200, target: 38000 },
+]
+
+function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointments, appointmentsLoading, appointmentsNotice, ui, onToggleStatus }) {
   const t = key => getText(ui.language, key)
   const isArabic = ui.language === 'ar'
-  const analytics = useMemo(() => buildAnalyticsSummary(appointments, doctor, ui.language), [appointments, doctor, ui.language])
-  const { reviews, loading: reviewsLoading, notice: reviewsNotice } = useReviewsByDoctorId(doctor?.id, ui.language)
-  const reviewSummary = useMemo(() => buildReviewSummary(reviews), [reviews])
-  const reviewLabels = {
-    title: t('reviewAnalyticsTitle'),
-    averageLabel: t('reviewAverageLabel'),
-    totalLabel: t('reviewTotalLabel'),
-    distributionLabel: t('reviewDistributionLabel'),
-    recentLabel: t('reviewRecentLabel'),
-    empty: t('reviewEmpty'),
-    patientFallback: t('reviewPatientFallback'),
-    commentFallback: t('reviewCommentFallback'),
-    loadingLabel: t('reviewLoading'),
+  const navigate = useNavigate()
+  const [clinicStatus, setClinicStatus] = useState('open')
+  const [emergencyMode, setEmergencyMode] = useState(false)
+  const [ehrPatient, setEhrPatient] = useState(null)
+
+  // Load initial clinic status from localStorage
+  useEffect(() => {
+    const saved = doctor?.id ? window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) : null
+    if (saved) setClinicStatus(saved)
+  }, [doctor?.id])
+  const [delayModal, setDelayModal] = useState({ open: false, appointment: null, doctorName: '' })
+  const [toast, setToast] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
+  const [expenses, setExpenses] = useState(null)
+  const [editExpenseKey, setEditExpenseKey] = useState(null)
+  const [editExpenseVal, setEditExpenseVal] = useState('')
+  const [savingExpense, setSavingExpense] = useState(false)
+
+  const reviewsQuery = useQuery({
+    queryKey: ['reviews', doctor?.id, ui.language],
+    enabled: Boolean(doctor?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, rating, comment, created_at, patient_name')
+        .eq('doctor_id', doctor.id)
+        .order('created_at', { ascending: false })
+      if (error || !Array.isArray(data)) {
+        return { reviews: getLocalReviewsForDoctor(doctor.id), notice: '' }
+      }
+      const localReviews = getLocalReviewsForDoctor(doctor.id)
+      const merged = [...data]
+      const existingIds = new Set(data.map(r => r.id))
+      merged.push(...localReviews.filter(r => !existingIds.has(r.id)))
+      return { reviews: merged, notice: '' }
+    },
+    staleTime: 120_000,
+  })
+  const dashboardReviews = reviewsQuery.data?.reviews || []
+  const avgRating = dashboardReviews.length
+    ? (dashboardReviews.reduce((s, r) => s + Number(r.rating || 0), 0) / dashboardReviews.length).toFixed(1)
+    : '—'
+
+  useEffect(() => { if (!toast) return; const t2 = setTimeout(() => setToast(''), 2800); return () => clearTimeout(t2) }, [toast])
+
+  const price = Number(doctor?.price_value) || 300
+
+  // Load expenses from Supabase
+  useEffect(() => {
+    if (!doctor?.id) { setExpenses(null); return }
+    let active = true
+    const loadExpenses = async () => {
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0)
+      const monthStr = monthStart.toISOString().slice(0, 10)
+      const { data } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('doctor_id', doctor.id)
+        .eq('month', monthStr)
+        .maybeSingle()
+      if (!active) return
+      if (data) {
+        setExpenses({ rent: Number(data.rent)||0, electricity: Number(data.electricity)||0, water: Number(data.water)||0, supplies: Number(data.supplies)||0, staff: Number(data.staff)||0, maintenance: Number(data.maintenance)||0, other: Number(data.other)||0 })
+      } else {
+        setExpenses(null)
+      }
+    }
+    loadExpenses()
+    return () => { active = false }
+  }, [doctor?.id])
+
+  const monthlyExpensesTotal = useMemo(() => {
+    if (!expenses) return 0
+    return Object.values(expenses).reduce((a, b) => a + b, 0)
+  }, [expenses])
+
+  const saveExpense = async () => {
+    const key = editExpenseKey
+    if (!key || !doctor?.id) return
+    const val = parseFloat(editExpenseVal) || 0
+    setSavingExpense(true)
+    try {
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0)
+      const monthStr = monthStart.toISOString().slice(0, 10)
+      const payload = { doctor_id: doctor.id, month: monthStr, [key]: val }
+      const { error } = await supabase.from('expenses').upsert(payload, { onConflict: ['doctor_id', 'month'] })
+      if (error) throw error
+      setExpenses(prev => ({ ...(prev || {}), [key]: val }))
+      setToast(isArabic ? '✅ تم حفظ المصروف' : '✅ Expense saved')
+    } catch {
+      setToast(isArabic ? '❌ فشل الحفظ' : '❌ Failed to save')
+    }
+    setSavingExpense(false)
+    setEditExpenseKey(null)
   }
 
-  const totals = appointmentStatusOrder.reduce(
-    (accumulator, status) => ({
-      ...accumulator,
-      [status]: appointments.filter(appointment => appointment.status === status).length,
-    }),
-    {},
-  )
+  const sortedAppointments = useMemo(() => {
+    return [...(appointments || [])].sort((a, b) => {
+      const orderA = STATUS_CONFIG[a.status]?.order ?? 99
+      const orderB = STATUS_CONFIG[b.status]?.order ?? 99
+      if (orderA !== orderB) return orderA - orderB
+      return (a.appointment_date || '').localeCompare(b.appointment_date || '')
+    })
+  }, [appointments])
 
-  const handleExport = () => {
-    const rows = buildAppointmentCsvRows(appointments, doctor, ui.language)
-    downloadCsv(`hihya-care-${doctor?.id || 'dashboard'}-appointments.csv`, rows)
+  const stats = useMemo(() => {
+    const now = new Date()
+    const todayStr = now.toDateString()
+    const thisMonth = now.getMonth()
+    const thisYear = now.getFullYear()
+
+    const today = appointments.filter(a => new Date(a.appointment_date).toDateString() === todayStr).length
+    const waiting = appointments.filter(a => a.status === 'Pending').length
+    const withDoctor = appointments.filter(a => a.status === 'In Clinic').length
+    const completed = appointments.filter(a => a.status === 'Completed').length
+    const completedThisMonth = appointments.filter(a => {
+      const d = new Date(a.appointment_date)
+      return d.getMonth() === thisMonth && d.getFullYear() === thisYear && a.status === 'Completed'
+    }).length
+    const completedToday = appointments.filter(a => {
+      return new Date(a.appointment_date).toDateString() === todayStr && a.status === 'Completed'
+    }).length
+
+    const monthlyRevenue = completedThisMonth * price
+    const todayRevenue = completedToday * price
+    return { today, waiting, withDoctor, completed, monthlyRevenue, todayRevenue, total: appointments.length, completedThisMonth, completedToday }
+  }, [appointments, price])
+
+  // Dynamic revenue chart grouped by month
+  const revenueChartData = useMemo(() => {
+    const monthNames = ['يناير','فبراير','مارس','إبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
+    const enMonthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    const months = {}
+    appointments.forEach(a => {
+      const d = new Date(a.appointment_date)
+      const key = `${d.getFullYear()}-${d.getMonth()}`
+      if (!months[key]) months[key] = { month: d.getMonth(), year: d.getFullYear(), revenue: 0, count: 0 }
+      if (a.status === 'Completed') {
+        const fee = Number(a.fees) || price
+        months[key].revenue += fee
+        months[key].count++
+      }
+    })
+    return Object.values(months).sort((a, b) => a.year - b.year || a.month - b.month).map(m => ({
+      month: isArabic ? monthNames[m.month] : enMonthNames[m.month],
+      revenue: m.revenue,
+      target: Math.round(m.revenue * 1.15),
+    }))
+  }, [appointments, price, isArabic])
+
+  // Dynamic peak hours from appointment times
+  const peakHoursData = useMemo(() => {
+    const hours = {}
+    appointments.forEach(a => {
+      const d = new Date(a.appointment_date)
+      const h = d.getHours()
+      const key = `${h}`
+      if (!hours[key]) hours[key] = { hour: h, patients: 0 }
+      hours[key].patients++
+    })
+    const sorted = Object.values(hours).sort((a, b) => a.hour - b.hour)
+    if (sorted.length === 0) return PEAK_HOURS // fallback
+    return sorted.map(h => {
+      const hour = h.hour
+      let label
+      if (hour === 0) label = '12ص'
+      else if (hour < 12) label = `${hour}ص`
+      else if (hour === 12) label = '12م'
+      else label = `${hour - 12}م`
+      return { hour: label, patients: h.patients }
+    })
+  }, [appointments])
+
+  // Dynamic diagnosis data — uses diagnosis field from appointments
+  const diagnosisChartData = useMemo(() => {
+    const diagCounts = {}
+    appointments.forEach(a => {
+      if (a.diagnosis) {
+        const d = String(a.diagnosis).trim()
+        diagCounts[d] = (diagCounts[d] || 0) + 1
+      }
+    })
+    const entries = Object.entries(diagCounts)
+    if (entries.length === 0) return DIAGNOSIS_DATA // fallback
+    const total = entries.reduce((sum, [, count]) => sum + count, 0)
+    const colors = ['#22d3ee','#10b981','#f59e0b','#8b5cf6','#ef4444','#64748b','#f97316','#ec4899']
+    return entries.slice(0, 8).map(([name, count], i) => ({
+      name: name.slice(0, 12),
+      value: Math.round((count / total) * 100),
+      color: colors[i % colors.length],
+    }))
+  }, [appointments])
+
+  const handleStatusCycle = async (appt) => {
+    const currentIdx = STATUS_CYCLE.indexOf(appt.status)
+    if (currentIdx < 0 || currentIdx >= STATUS_CYCLE.length - 1) return
+    const nextStatus = STATUS_CYCLE[currentIdx + 1]
+    setActionLoading(true)
+    try {
+      await supabase.from('appointments').update({ status: nextStatus }).eq('id', appt.id)
+      setAppointments(prev => prev.map(item => item.id === appt.id ? { ...item, status: nextStatus } : item))
+      setToast(`تم تحديث حالة ${appt.patient_name} إلى ${STATUS_CONFIG[nextStatus]?.label || nextStatus}`)
+    } catch (e) {
+      setToast('فشل التحديث')
+    }
+    setActionLoading(false)
   }
+
+  const sendDelayAlert = (appt, delayMin) => {
+    const msg = DELAY_TEMPLATES.find(t => t.delay === delayMin)?.msg(appt.patient_name, doctor?.name || 'الطبيب') || `تأخير ${delayMin} دقيقة`
+    openWhatsApp(appt.phone || appt.patient_phone, msg)
+    appointments.filter(a => a.status === 'Pending' || a.status === 'booked').forEach(p => {
+      if (p.id !== appt.id) setTimeout(() => openWhatsApp(p.phone || p.patient_phone, msg), 300)
+    })
+    setToast(`تم إرسال إشعار تأخير ${delayMin} دقيقة`)
+  }
+
+  const sendConfirmMsg = (appt) => {
+    const msg = `السلام عليكم ${appt.patient_name} 🌿 تم تأكيد موعدك مع د. ${doctor?.name || 'الطبيب'}. نستقبلكم في العيادة.`
+    openWhatsApp(appt.phone || appt.patient_phone, msg)
+    setToast(`تم إرسال تأكيد إلى ${appt.patient_name}`)
+  }
+
+  if (doctorLoading) {
+    return <div className="flex items-center justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-cyan-500" /></div>
+  }
+
+  const sevLabel = (sev) => sev === 'urgent' ? 'عاجل' : sev === 'routine' ? 'روتيني' : 'استشارة'
+  const sevCls = (sev) => sev === 'urgent'
+    ? 'border-rose-300/30 bg-rose-500/10 text-rose-700 dark:text-rose-200'
+    : sev === 'routine'
+      ? 'border-amber-300/30 bg-amber-500/10 text-amber-700 dark:text-amber-200'
+      : 'border-emerald-300/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200'
 
   return (
-    <div className="rounded-[2rem] border border-white/40 bg-white/70 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 sm:p-6">
-      <div className="rounded-[1.6rem] border border-slate-200 bg-slate-50 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] dark:border-white/10 dark:bg-slate-950/60 sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="rounded-[2rem] border border-white/40 bg-white/70 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5 sm:p-6">
+      <div className="rounded-[1.6rem] border border-slate-200 bg-slate-50 p-6 dark:border-white/10 dark:bg-slate-950/60 sm:p-8">
+        {/* Toast */}
+        {toast ? (
+          <div className="mb-4 rounded-2xl border border-emerald-300/30 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">{toast}</div>
+        ) : null}
+        {emergencyMode ? (
+          <div className="mb-4 rounded-2xl border border-rose-300/40 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-800 animate-pulse dark:bg-rose-500/15 dark:text-rose-100">🚨 وضع الطوارئ مفعل</div>
+        ) : null}
+
+        {/* Header */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardAppointments')}</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">
-              {doctor ? t('dashboardUnlocked') : doctorLoading ? t('loadingDoctorData') : t('enterDashboardCode')}
+            <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">Hihya Care</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-900 dark:text-white">
+              {doctor ? `د. ${doctor.name}` : 'لوحة التحكم'}
             </h2>
-            <p className={`mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 ${isArabic ? 'text-right' : 'text-left'}`}>
-              {t('dashboardIntro')}
-            </p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{doctor?.specialty || ''}</p>
           </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-auto">
-            <MetricCard label={t('todayPatients')} value={String(analytics.todayPatients)} tone="text-cyan-700 dark:text-cyan-100" />
-            <MetricCard label={t('monthPatients')} value={String(analytics.currentMonthPatients)} tone="text-emerald-700 dark:text-emerald-100" />
-            <MetricCard label={t('revenueEstimate')} value={`$${analytics.revenueEstimate.toLocaleString()}`} tone="text-sky-700 dark:text-sky-100" />
-            <MetricCard label={t('dashboardTotalWaiting')} value={String(totals.Pending || 0)} tone="text-emerald-700 dark:text-emerald-100" />
-            <MetricCard label={t('dashboardState')} value={String(totals['In Clinic'] || 0)} tone="text-cyan-700 dark:text-cyan-100" />
-            <MetricCard label={t('completedStatus')} value={String(totals.Completed || 0)} tone="text-sky-700 dark:text-sky-100" />
-            <MetricCard label={t('dashboardDoctorId')} value={doctor?.id || 'N/A'} tone="text-slate-700 dark:text-slate-100" />
-          </div>
-        </div>
-
-        {doctor ? (
-          <div className="mt-8 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-            <div className="rounded-[1.5rem] border border-cyan-300/15 bg-gradient-to-br from-white/80 to-white/50 p-6 backdrop-blur-xl shadow-[0_12px_28px_rgba(15,23,42,0.05)] dark:from-slate-950/60 dark:to-slate-900/40 dark:bg-slate-950/60">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-cyan-700/70 dark:text-cyan-200/70">{t('dashboardIdentity')}</p>
-                  <h3 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{doctor.name}</h3>
-                  <p className="mt-2 text-lg text-cyan-700/80 dark:text-cyan-100/80">{doctor.specialty}</p>
-                </div>
-                
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {doctor.experience && (
-                    <div className="rounded-2xl border border-slate-200/50 bg-white/60 p-3 dark:border-white/10 dark:bg-white/5">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">خبرة</p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{doctor.experience}</p>
-                    </div>
-                  )}
-                  {doctor.clinicLocation && (
-                    <div className="rounded-2xl border border-slate-200/50 bg-white/60 p-3 dark:border-white/10 dark:bg-white/5">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">العيادة</p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{doctor.clinicLocation}</p>
-                    </div>
-                  )}
-                  {doctor.price && (
-                    <div className="rounded-2xl border border-slate-200/50 bg-white/60 p-3 dark:border-white/10 dark:bg-white/5">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">السعر</p>
-                      <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-100">{doctor.price}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-emerald-300/20 bg-gradient-to-br from-emerald-50/80 to-emerald-100/40 p-5 backdrop-blur-xl dark:from-emerald-400/10 dark:to-emerald-500/5">
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-emerald-300/25 bg-white/80 p-4 dark:border-emerald-400/20 dark:bg-emerald-400/5">
-                  <p className="text-xs uppercase tracking-[0.3em] text-emerald-700/70 dark:text-emerald-200/70">كود الدخول</p>
-                  <p className="mt-2 text-2xl font-bold font-mono text-emerald-800 dark:text-emerald-100">{doctor.secret_code || 'HC-0000'}</p>
-                </div>
-                
-                <div className="rounded-2xl border border-cyan-300/25 bg-white/80 p-4 dark:border-cyan-400/20 dark:bg-cyan-400/5">
-                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-700/70 dark:text-cyan-200/70">معرّف الطبيب</p>
-                  <p className="mt-2 text-lg font-semibold font-mono text-cyan-800 dark:text-cyan-100 break-all">{doctor?.id || 'N/A'}</p>
-                </div>
-
-                <div className="rounded-2xl border border-sky-300/25 bg-white/80 p-4 dark:border-sky-400/20 dark:bg-sky-400/5">
-                  <p className="text-xs uppercase tracking-[0.3em] text-sky-700/70 dark:text-sky-200/70">الحالة</p>
-                  <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-sky-800 dark:text-sky-100">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                    نشط وجاهز
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {appointmentsLoading ? (
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-            {t('loadingAppointmentsData')}
-          </div>
-        ) : appointmentsNotice ? (
-          <div className="mt-6 rounded-3xl border border-emerald-300/20 bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-100">
-            {appointmentsNotice}
-          </div>
-        ) : null}
-
-        <div className="mt-8 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 dark:border-white/10 dark:bg-white/5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-cyan-700/70 dark:text-cyan-200/70">{t('analyticsTitle')}</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{t('statusBreakdown')}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('analyticsIntro')}</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleExport}
-                className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-400/20 dark:text-cyan-100"
-              >
-                {t('exportReport')}
-              </button>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('statusBreakdown')}</p>
-                <div className="mt-3 h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={analytics.statusBreakdown}
-                        dataKey="value"
-                        nameKey="label"
-                        innerRadius={64}
-                        outerRadius={94}
-                        paddingAngle={3}
-                      >
-                        {analytics.statusBreakdown.map((entry, index) => (
-                          <Cell
-                            key={entry.label}
-                            fill={['#06b6d4', '#10b981', '#0ea5e9'][index % 3]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('peakDay')}</p>
-                <div className="mt-3 h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analytics.weekdayCounts}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#06b6d4" radius={[12, 12, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[1.6rem] border border-slate-200 bg-white/80 p-5 dark:border-white/10 dark:bg-white/5">
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-700/70 dark:text-cyan-200/70">{t('monthlyReport')}</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{t('monthlyTrends')}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{t('currentMonth')}</p>
-
-            <div className="mt-5 h-56 rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950/60">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analytics.monthSeries}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="appointments" stroke="#10b981" strokeWidth={3} dot={false} />
-                  <Line type="monotone" dataKey="completed" stroke="#06b6d4" strokeWidth={3} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/60">
-              <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
-                <thead className="bg-slate-50 text-left text-slate-500 dark:bg-white/5 dark:text-slate-300">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">{t('currentMonth')}</th>
-                    <th className="px-4 py-3 font-medium">{t('appointmentsTitle')}</th>
-                    <th className="px-4 py-3 font-medium">{t('completedStatus')}</th>
-                    <th className="px-4 py-3 font-medium">{t('revenueEstimate')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-white/10">
-                  {analytics.monthSeries.map(row => (
-                    <tr key={row.key} className="text-slate-700 dark:text-slate-200">
-                      <td className="px-4 py-3">{row.label}</td>
-                      <td className="px-4 py-3">{row.appointments}</td>
-                      <td className="px-4 py-3">{row.completed}</td>
-                      <td className="px-4 py-3">${row.revenue.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {doctor ? (
-          <div className="mt-8">
-            <DoctorReviewAnalytics
-              summary={reviewSummary}
-              reviews={reviews}
-              isLoading={reviewsLoading}
-              notice={reviewsNotice}
-              labels={reviewLabels}
-              formatTimeAgo={value => formatTimeAgo(value, ui.language)}
-            />
-          </div>
-        ) : null}
-
-        <div className="mt-8 space-y-4">
-          {appointments.length ? (
-            appointments.map(appointment => {
-              const localizedStatus = localizeAppointmentStatus(ui.language, appointment.status)
-              const nextStatus = cycleAppointmentStatus(appointment.status)
-
-              return (
-                <div
-                  key={appointment.id}
-                  className="rounded-[1.5rem] border border-white/40 bg-white/75 p-4 shadow-[0_16px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:shadow-[0_18px_36px_rgba(34,211,238,0.16)] dark:border-white/10 dark:bg-white/5"
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Clinic Status Toggle */}
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/5">
+              {['open', 'break', 'closed'].map(s => (
+                <button key={s} type="button" onClick={() => { setClinicStatus(s); if (doctor?.id) window.localStorage.setItem(`hihya-clinic-status-${doctor.id}`, s) }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${clinicStatus === s
+                    ? s === 'open' ? 'bg-emerald-500 text-white' : s === 'break' ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'
+                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400'}`}
                 >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <p className="text-lg font-semibold text-slate-900 dark:text-white">{appointment.patient_name}</p>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] ${statusBadgeClass(appointment.status)}`}>
-                          {localizedStatus}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{appointment.phone}</p>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatAppointmentDate(appointment, ui.language)}</p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => onToggleStatus(appointment)}
-                        className="rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/20 via-sky-500/20 to-emerald-400/20 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:-translate-y-0.5 hover:bg-cyan-400/25 dark:text-cyan-100"
-                      >
-                        {t('toggleStatus')} → {localizeAppointmentStatus(ui.language, nextStatus)}
-                      </button>
-                      {appointment.status === 'Completed' ? (
-                        <Link
-                          to={`/review/${appointment.id}`}
-                          className="rounded-2xl border border-amber-300/30 bg-amber-200/40 px-4 py-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-200/60 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100"
-                        >
-                          {t('reviewOpen')}
-                        </Link>
-                      ) : (
-                        <span className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                          {t('reviewUnavailable')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })
-          ) : (
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              {t('noAppointments')}
+                  {s === 'open' ? 'مفتوح' : s === 'break' ? 'استراحة' : 'مغلق'}
+                </button>
+              ))}
             </div>
-          )}
+            <button type="button" onClick={() => setEmergencyMode(!emergencyMode)}
+              className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${emergencyMode ? 'border-rose-300 bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200' : 'border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300'}`}
+            >
+              <TriangleAlert className="inline h-3.5 w-3.5 mr-1" />{emergencyMode ? 'إلغاء الطوارئ' : 'طوارئ'}
+            </button>
+            <Link to="/" className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">الرئيسية</Link>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-400/20 dark:bg-emerald-500/10">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-600/70 dark:text-emerald-200/70">الإيرادات الشهرية</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-800 dark:text-emerald-100">{stats.monthlyRevenue.toLocaleString()} ج.م</p>
+            <p className="mt-1 text-xs text-emerald-600/60 dark:text-emerald-200/60">{stats.completedThisMonth} مكتمل بالشهر</p>
+          </div>
+          <div className="rounded-2xl border border-cyan-200 bg-cyan-50/80 p-4 dark:border-cyan-400/20 dark:bg-cyan-500/10">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-600/70 dark:text-cyan-200/70">رضا المرضى</p>
+            <p className="mt-2 text-2xl font-bold text-cyan-800 dark:text-cyan-100">{stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 98}%</p>
+            <p className="mt-1 text-xs text-cyan-600/60 dark:text-cyan-200/60">{stats.completed} مكتمل</p>
+          </div>
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/80 p-4 dark:border-violet-400/20 dark:bg-violet-500/10">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-violet-600/70 dark:text-violet-200/70">مواعيد اليوم</p>
+            <p className="mt-2 text-2xl font-bold text-violet-800 dark:text-violet-100">{stats.today}</p>
+            <p className="mt-1 text-xs text-violet-600/60 dark:text-violet-200/60">{stats.waiting} انتظار · {stats.withDoctor} مع الطبيب</p>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-400/20 dark:bg-amber-500/10">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-amber-600/70 dark:text-amber-200/70">وارد اليوم</p>
+            <p className="mt-2 text-2xl font-bold text-amber-800 dark:text-amber-100">{stats.todayRevenue.toLocaleString()} ج.م</p>
+            <p className="mt-1 text-xs text-amber-600/60 dark:text-amber-200/60">{stats.completedToday} مكتمل بـ {price} ج.م</p>
+          </div>
+        </div>
+
+        {/* Main Grid: Live Pulse + Analytics Right */}
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">
+
+          {/* ===== LIVE PULSE TABLE ===== */}
+          <section>
+            <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                  <HeartPulse className="h-5 w-5 text-rose-500" />النبض المباشر
+                </h2>
+                <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  <Activity className="h-3 w-3" />Live
+                </span>
+              </div>
+
+              {!doctor ? (
+                <div className="flex flex-col items-center py-12 text-slate-400"><CalendarCheck className="h-12 w-12 mb-3" /><p className="text-sm">أدخل رمز الطبيب لعرض البيانات</p></div>
+              ) : sortedAppointments.length === 0 ? (
+                <div className="flex flex-col items-center py-12 text-slate-400"><CalendarCheck className="h-12 w-12 mb-3" /><p className="text-sm">لا توجد مواعيد اليوم</p></div>
+              ) : (
+                <div className="space-y-2">
+                  {sortedAppointments.map((appt) => {
+                    const cfg = STATUS_CONFIG[appt.status] || STATUS_CONFIG.Pending
+                    const isEhrOpen = ehrPatient?.id === appt.id
+                    return (
+                      <div key={appt.id}>
+                        <div className="group flex flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-3 transition hover:border-cyan-200 hover:shadow-sm dark:border-white/5 dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-emerald-100 dark:from-cyan-500/20 dark:to-emerald-500/20">
+                              <UserRound className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button type="button" onClick={() => setEhrPatient(isEhrOpen ? null : appt)} className="text-sm font-semibold text-slate-900 hover:text-cyan-700 dark:text-white dark:hover:text-cyan-300">
+                                  {appt.patient_name}
+                                </button>
+                                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${cfg.className}`}>{cfg.label}</span>
+                                <span className="text-[10px] text-slate-400">{appt.appointment_date ? new Date(appt.appointment_date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                              </div>
+                              <p className="text-xs text-slate-400">{appt.phone || ''}{appt.patient_age ? ` · ${appt.patient_age} سنة` : ''}{appt.patient_gender ? ` · ${appt.patient_gender === 'male' || appt.patient_gender === 'ذكر' ? 'ذكر' : 'أنثى'}` : ''}</p>
+                              {/* AI Summary Badge */}
+                              {appt.symptoms && (
+                                <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 border border-violet-200 dark:bg-violet-500/10 dark:text-violet-200 dark:border-violet-400/20">
+                                  <Sparkles className="h-3 w-3" />{String(appt.symptoms).slice(0, 25)}
+                                </span>
+                              )}
+                              {appt.attachments?.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {appt.attachments.map((att, i) => (
+                                    att.data ? (
+                                      <a key={i} href={att.data} download={att.name || 'file'} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                                        className="group relative block h-10 w-10 overflow-hidden rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-400/20 dark:bg-blue-500/10">
+                                        {att.data.startsWith('data:image/') ? (
+                                          <img src={att.data} alt={att.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                          <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-blue-600 dark:text-blue-300">PDF</div>
+                                        )}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] text-white transition group-hover:bg-black/40">📂</div>
+                                      </a>
+                                    ) : (
+                                      <span key={i} className="inline-flex items-center gap-0.5 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-200 dark:border-blue-400/20" title={att.name || ''}>
+                                        📎 {att.name?.slice(0, 12) || 'ملف'}
+                                      </span>
+                                    )
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button type="button" onClick={() => handleStatusCycle(appt)} disabled={actionLoading || appt.status === 'Completed' || appt.status === 'Cancelled'}
+                              className="rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-700 transition hover:bg-cyan-100 disabled:opacity-40 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-200">
+                              {appt.status === 'Pending' ? '→ كشف' : appt.status === 'In Clinic' ? '→ تم' : '✓'}
+                            </button>
+                            <button type="button" onClick={() => sendConfirmMsg(appt)}
+                              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+                              <MessageCircle className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" onClick={() => setDelayModal({ open: true, appointment: appt, doctorName: doctor?.name || 'الطبيب' })}
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
+                              <Clock className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" onClick={() => setEhrPatient(isEhrOpen ? null : appt)}
+                              className={`rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition ${isEhrOpen ? 'border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-400/20 dark:bg-violet-500/20 dark:text-violet-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400'}`}>
+                              ملف
+                            </button>
+                          </div>
+                        </div>
+                        {/* Mini-EHR */}
+                        {isEhrOpen && (
+                          <div className="mt-1 mb-2 mr-12 rounded-xl border border-violet-200 bg-violet-50/80 p-3 dark:border-violet-400/20 dark:bg-violet-500/5">
+                            <p className="mb-2 text-xs font-semibold text-violet-800 dark:text-violet-200">📋 تاريخ {appt.patient_name} مع العيادة</p>
+                            {appt.ehrNotes ? (
+                              <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                                {appt.ehrNotes.map((note, i) => (
+                                  <div key={i} className="rounded-lg border border-white/50 bg-white/80 p-2 dark:border-white/10 dark:bg-white/[0.04]">
+                                    <p className="text-slate-400">{note.date}</p>
+                                    <p className="text-slate-700 dark:text-slate-200"><span className="text-slate-500">التشخيص:</span> {note.diagnosis}</p>
+                                    <p className="text-slate-700 dark:text-slate-200"><span className="text-slate-500">العلاج:</span> {note.prescription}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-400">لا توجد زيارات سابقة.</p>
+                            )}
+                            <div className="mt-2 flex gap-2">
+                              <input type="text" placeholder="تشخيص..." className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none dark:border-white/10 dark:bg-white/5" />
+                              <button type="button" className="rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-200">حفظ</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ===== RIGHT COLUMN: Analytics + Expense ===== */}
+          <section className="space-y-5">
+            {/* Revenue Chart */}
+            <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-3 flex items-center justify-between">
+                <div><p className="text-[10px] uppercase tracking-[0.35em] text-cyan-600/70 dark:text-cyan-200/70">تحليلات</p><h3 className="text-base font-semibold text-slate-900 dark:text-white">الإيرادات</h3></div>
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={revenueChartData.length > 0 ? revenueChartData : MONTHLY_REVENUE} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="month" stroke="rgba(148,163,184,0.4)" tick={{ fontSize: 9 }} />
+                    <YAxis stroke="rgba(148,163,184,0.4)" tick={{ fontSize: 9 }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid rgba(34,211,238,0.3)', borderRadius: '12px', fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 3 }} name="الإيرادات" />
+                    <Line type="monotone" dataKey="target" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: '#f59e0b', r: 3 }} name="الهدف" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Diagnosis Pie */}
+            <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-3 flex items-center justify-between">
+                <div><p className="text-[10px] uppercase tracking-[0.35em] text-cyan-600/70 dark:text-cyan-200/70">تحليلات</p><h3 className="text-base font-semibold text-slate-900 dark:text-white">التشخيصات</h3></div>
+                <BarChart3 className="h-4 w-4 text-violet-500" />
+              </div>
+              <div className="h-36">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={diagnosisChartData} cx="50%" cy="50%" innerRadius={36} outerRadius={60} paddingAngle={3} dataKey="value">
+                      {diagnosisChartData.map((entry, idx) => (<Cell key={idx} fill={entry.color} />))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1">
+                {diagnosisChartData.map(item => (
+                  <div key={item.name} className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name} ({item.value}%)
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Peak Hours */}
+            <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-3 flex items-center justify-between">
+                <div><p className="text-[10px] uppercase tracking-[0.35em] text-cyan-600/70 dark:text-cyan-200/70">تحليلات</p><h3 className="text-base font-semibold text-slate-900 dark:text-white">ساعات الذروة</h3></div>
+                <Clock3 className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={peakHoursData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="hour" stroke="rgba(148,163,184,0.4)" tick={{ fontSize: 9 }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid rgba(34,211,238,0.3)', borderRadius: '12px', fontSize: '12px' }} />
+                    <Bar dataKey="patients" fill="#22d3ee" radius={[4, 4, 0, 0]} maxBarSize={18}>
+                      {peakHoursData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.patients >= 8 ? '#ef4444' : entry.patients >= 5 ? '#f59e0b' : '#22d3ee'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Reviews */}
+            <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-3 flex items-center justify-between">
+                <div><p className="text-[10px] uppercase tracking-[0.35em] text-violet-600/70 dark:text-violet-200/70">{isArabic ? 'التقييمات' : 'Reviews'}</p><h3 className="text-base font-semibold text-slate-900 dark:text-white">{isArabic ? 'آراء المرضى' : 'Patient Feedback'}</h3></div>
+                <Star className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-400/20 dark:bg-amber-500/10">
+                <span className="text-2xl font-bold text-amber-800 dark:text-amber-100">{avgRating}</span>
+                <div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} className={`h-3.5 w-3.5 ${i < Math.round(Number(avgRating) || 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />)}</div>
+                <span className="text-xs text-amber-600/70 dark:text-amber-200/70">({dashboardReviews.length})</span>
+              </div>
+              {dashboardReviews.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {dashboardReviews.slice(0, 10).map((rev, i) => (
+                    <div key={rev.id || i} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-white/5 dark:bg-white/[0.02]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{rev.patient_name || (isArabic ? 'مريض' : 'Patient')}</span>
+                        <div className="flex gap-0.5">{Array.from({ length: 5 }, (_, j) => <Star key={j} className={`h-3 w-3 ${j < Number(rev.rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />)}</div>
+                      </div>
+                      {rev.comment ? <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{rev.comment}</p> : null}
+                      <p className="mt-1 text-[10px] text-slate-400">{rev.created_at ? new Date(rev.created_at).toLocaleDateString('ar-EG') : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-4">{isArabic ? 'لا توجد تقييمات بعد' : 'No reviews yet'}</p>
+              )}
+            </div>
+
+            {/* Expense & Profit */}
+            <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-3 flex items-center justify-between">
+                <div><p className="text-[10px] uppercase tracking-[0.35em] text-cyan-600/70 dark:text-cyan-200/70">{isArabic ? 'المالية' : 'Finance'}</p><h3 className="text-base font-semibold text-slate-900 dark:text-white">{isArabic ? 'الإيرادات والمصروفات' : 'Revenue & Expenses'}</h3></div>
+                <DollarSign className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-2.5 text-center dark:border-emerald-400/20 dark:bg-emerald-500/10">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-600/70 dark:text-emerald-200/70">الإيرادات</p>
+                  <p className="text-lg font-bold text-emerald-800 dark:text-emerald-100">{stats.monthlyRevenue.toLocaleString()} ج.م</p>
+                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-2.5 text-center dark:border-rose-400/20 dark:bg-rose-500/10">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-rose-600/70 dark:text-rose-200/70">المصروفات</p>
+                  <p className="text-lg font-bold text-rose-800 dark:text-rose-100">{monthlyExpensesTotal.toLocaleString()} ج.م</p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-cyan-200 bg-cyan-50/80 p-3 text-center dark:border-cyan-400/20 dark:bg-cyan-500/10">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-600/70 dark:text-cyan-200/70">صافي الربح</p>
+                <p className="text-xl font-bold text-cyan-800 dark:text-cyan-100">{(stats.monthlyRevenue - monthlyExpensesTotal).toLocaleString()} ج.م</p>
+                <p className="text-xs text-cyan-600/60 dark:text-cyan-200/60">{stats.monthlyRevenue > 0 ? ((stats.monthlyRevenue - monthlyExpensesTotal) / stats.monthlyRevenue * 100).toFixed(1) : 0}% هامش ربح</p>
+              </div>
+              <div className="mt-3 space-y-1">
+                {Object.entries(EXPENSE_DATA).map(([key, defaultVal]) => {
+                  const val = expenses?.[key] ?? defaultVal
+                  const total = monthlyExpensesTotal || 1
+                  const expenseLabels = { rent: 'إيجار', electricity: 'كهرباء', water: 'مياه', supplies: 'خامات طبية', staff: 'رواتب', maintenance: 'صيانة', other: 'أخرى' }
+                  return (
+                    <div key={key} className="flex items-center justify-between rounded-lg border border-slate-100 bg-white/50 px-2.5 py-1.5 dark:border-white/5 dark:bg-white/[0.02]">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">{expenseLabels[key] || key}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-16 rounded-full bg-slate-100 overflow-hidden dark:bg-white/5">
+                          <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" style={{ width: `${(val / total) * 100}%` }} />
+                        </div>
+                        {editExpenseKey === key ? (
+                          <div className="flex items-center gap-1">
+                            <input type="number" value={editExpenseVal} onChange={e => setEditExpenseVal(e.target.value)}
+                              className="w-20 rounded-lg border border-cyan-200 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none dark:border-cyan-400/20 dark:bg-white/5 dark:text-white" />
+                            <button type="button" onClick={saveExpense} disabled={savingExpense}
+                              className="rounded-lg bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200">{savingExpense ? '...' : 'حفظ'}</button>
+                            <button type="button" onClick={() => setEditExpenseKey(null)}
+                              className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-400">✕</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => { setEditExpenseKey(key); setEditExpenseVal(String(val)) }}
+                            className="text-xs font-medium text-slate-600 dark:text-slate-300 w-14 text-left hover:text-cyan-600 transition-colors">
+                            {val.toLocaleString()} ج.م
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {!expenses ? (
+                <p className="mt-2 text-[10px] text-slate-400 text-center">{isArabic ? '💡 اضغط على القيمة لتعديلها' : '💡 Click a value to edit'}</p>
+              ) : null}
+            </div>
+          </section>
         </div>
       </div>
-    </div>
-  )
-}
 
-function statusBadgeClass(status) {
-  switch (status) {
-    case 'In Clinic':
-      return 'border-cyan-300/30 bg-cyan-400/15 text-cyan-700 dark:text-cyan-100'
-    case 'Completed':
-      return 'border-emerald-300/30 bg-emerald-400/15 text-emerald-700 dark:text-emerald-100'
-    default:
-      return 'border-slate-300/50 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300'
-  }
-}
-
-function MetricCard({ label, value, tone }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-      <p className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={`mt-2 text-lg font-semibold ${tone}`}>{value}</p>
-    </div>
-  )
-}
-
-function InfoPanel({ label, value, ui }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-      <p className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-100">{value}</p>
+      {/* Delay Modal */}
+      {delayModal.open && delayModal.appointment ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">إشعار تأخير</h3>
+            <p className="mt-2 text-sm text-slate-500">إرسال تنبيه لـ {delayModal.appointment.patient_name} ومرضى آخرين</p>
+            <div className="mt-4 space-y-2">
+              {DELAY_TEMPLATES.map(t => (
+                <button key={t.delay} type="button" onClick={() => { sendDelayAlert(delayModal.appointment, t.delay); setDelayModal({ open: false, appointment: null, doctorName: '' }) }}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-right text-sm text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button type="button" onClick={() => setDelayModal({ open: false, appointment: null, doctorName: '' })}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">إلغاء</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
