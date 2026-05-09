@@ -22,13 +22,12 @@ CREATE POLICY "doctors_update_own" ON doctors
 -- 2. APPOINTMENTS TABLE
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 
--- Doctors can only see appointments assigned to them
+-- Anyone can read appointments (frontend handles auth via secret code)
 DROP POLICY IF EXISTS "appointments_read_own" ON appointments;
-CREATE POLICY "appointments_read_own" ON appointments
+DROP POLICY IF EXISTS "appointments_read_public" ON appointments;
+CREATE POLICY "appointments_read_public" ON appointments
   FOR SELECT
-  USING (
-    doctor_id IN (SELECT id FROM doctors WHERE user_id = auth.uid())
-  );
+  USING (true);
 
 -- Anyone can create an appointment (patient booking)
 DROP POLICY IF EXISTS "appointments_insert_public" ON appointments;
@@ -36,24 +35,22 @@ CREATE POLICY "appointments_insert_public" ON appointments
   FOR INSERT
   WITH CHECK (true);
 
--- Only the assigned doctor can update appointments (status changes, etc.)
+-- Anyone can update appointments (frontend handles auth via secret code)
 DROP POLICY IF EXISTS "appointments_update_own" ON appointments;
-CREATE POLICY "appointments_update_own" ON appointments
+DROP POLICY IF EXISTS "appointments_update_public" ON appointments;
+CREATE POLICY "appointments_update_public" ON appointments
   FOR UPDATE
-  USING (
-    doctor_id IN (SELECT id FROM doctors WHERE user_id = auth.uid())
-  );
+  USING (true);
 
 -- 3. TRIAGE RESULTS TABLE
 ALTER TABLE triage_results ENABLE ROW LEVEL SECURITY;
 
--- Doctors can read triage results linked to their patients
+-- Anyone can read triage results (frontend handles auth via secret code)
 DROP POLICY IF EXISTS "triage_results_read_own" ON triage_results;
-CREATE POLICY "triage_results_read_own" ON triage_results
+DROP POLICY IF EXISTS "triage_results_read_public" ON triage_results;
+CREATE POLICY "triage_results_read_public" ON triage_results
   FOR SELECT
-  USING (
-    doctor_id IN (SELECT id FROM doctors WHERE user_id = auth.uid())
-  );
+  USING (true);
 
 -- Anyone can submit a triage
 DROP POLICY IF EXISTS "triage_results_insert_public" ON triage_results;
@@ -82,29 +79,26 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 
--- Doctors can read their own expenses
+-- Anyone can read expenses (frontend handles auth via secret code)
 DROP POLICY IF EXISTS "expenses_read_own" ON expenses;
-CREATE POLICY "expenses_read_own" ON expenses
+DROP POLICY IF EXISTS "expenses_read_public" ON expenses;
+CREATE POLICY "expenses_read_public" ON expenses
   FOR SELECT
-  USING (
-    doctor_id IN (SELECT id FROM doctors WHERE user_id = auth.uid())
-  );
+  USING (true);
 
--- Doctors can insert their own expenses
+-- Anyone can insert expenses
 DROP POLICY IF EXISTS "expenses_insert_own" ON expenses;
-CREATE POLICY "expenses_insert_own" ON expenses
+DROP POLICY IF EXISTS "expenses_insert_public" ON expenses;
+CREATE POLICY "expenses_insert_public" ON expenses
   FOR INSERT
-  WITH CHECK (
-    doctor_id IN (SELECT id FROM doctors WHERE user_id = auth.uid())
-  );
+  WITH CHECK (true);
 
--- Doctors can update their own expenses
+-- Anyone can update expenses
 DROP POLICY IF EXISTS "expenses_update_own" ON expenses;
-CREATE POLICY "expenses_update_own" ON expenses
+DROP POLICY IF EXISTS "expenses_update_public" ON expenses;
+CREATE POLICY "expenses_update_public" ON expenses
   FOR UPDATE
-  USING (
-    doctor_id IN (SELECT id FROM doctors WHERE user_id = auth.uid())
-  );
+  USING (true);
 
 -- =============================================
 -- Helper: Link a doctor to an auth user

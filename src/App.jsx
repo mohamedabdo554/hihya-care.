@@ -3475,7 +3475,7 @@ function useAppointmentsByDoctorId(doctorId, language) {
       try {
         const { data, error } = await supabase
           .from('appointments')
-          .select('id, patient_name, patient_phone, appointment_date, appointment_time, status, doctor_id, symptoms')
+          .select('id, patient_name, patient_phone, appointment_date, appointment_time, status, doctor_id, symptoms, patient_age, patient_gender')
           .eq('doctor_id', doctorId)
           .order('appointment_date', { ascending: true })
 
@@ -3821,6 +3821,8 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
           appointment_date: appointmentIso,
           appointment_time: appointmentTime,
           status: 'Pending',
+          patient_age: intakeData.age || null,
+          patient_gender: intakeData.gender || null,
           symptoms: [
             intakeData.age ? `العمر: ${intakeData.age}` : '',
             intakeData.gender ? `النوع: ${intakeData.gender}` : '',

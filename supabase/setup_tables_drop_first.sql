@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS appointments (
   appointment_time TEXT,
   status TEXT DEFAULT 'Pending',
   symptoms TEXT,
+  patient_age TEXT,
+  patient_gender TEXT,
   fees NUMERIC,
   diagnosis TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
