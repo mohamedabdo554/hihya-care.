@@ -25,7 +25,6 @@ import {
   YAxis,
 } from 'recharts'
 import { ArrowLeft, Clock, Mail, MapPin, MessageCircleMore, Phone, Sparkles, Stethoscope, Star, Wallet, HeartPulse, Activity, AlertTriangle, CheckCircle2, XCircle, UserRound, MessageCircle, DollarSign, TrendingUp, Clock3, Users, ScanLine, ShieldCheck, BarChart3, Loader2, TriangleAlert, CalendarCheck, CalendarDays, Smile, PhoneCall } from 'lucide-react'
-import DoctorReviewAnalytics from './components/DoctorReviewAnalytics.jsx'
 import DoctorAvailabilityShowcase from './components/DoctorAvailabilityShowcase.jsx'
 import ReviewFeedbackCard from './components/ReviewFeedbackCard.jsx'
 import AppointmentConfirmationPage from './components/AppointmentConfirmationPage.jsx'
@@ -781,11 +780,6 @@ const fallbackAppointmentsByDoctor = {
 }
 
 const appointmentStatusOrder = ['Pending', 'In Clinic', 'Completed']
-
-function cycleAppointmentStatus(status) {
-  const currentIndex = appointmentStatusOrder.indexOf(status)
-  return appointmentStatusOrder[(currentIndex + 1) % appointmentStatusOrder.length]
-}
 
 function localizeAppointmentStatus(language, status) {
   const normalizedStatus = appointmentStatusOrder.includes(status) ? status : 'Pending'
@@ -2320,6 +2314,14 @@ function HomePage({ doctors, loading, notice, ui }) {
   const [genderFilter, setGenderFilter] = useState('all')
   const [availabilityFilter, setAvailabilityFilter] = useState('all')
   const [priceFilter, setPriceFilter] = useState('all')
+  const [clinicStatusNonce, setClinicStatusNonce] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setClinicStatusNonce(n => n + 1)
+    window.addEventListener('clinic-status-changed', handler)
+    window.addEventListener('storage', handler)
+    return () => { window.removeEventListener('clinic-status-changed', handler); window.removeEventListener('storage', handler) }
+  }, [])
 
   const specialtyGroups = useMemo(
     () => ({
@@ -2338,7 +2340,8 @@ function HomePage({ doctors, loading, notice, ui }) {
         .map(value => String(value).toLowerCase())
       const matchesSearch = !query || nameValues.some(value => value.includes(query))
 
-      const clinicStatus = typeof window !== 'undefined' ? window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) : null
+      let clinicStatus = null
+      try { clinicStatus = window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) } catch (e) { /* localStorage unavailable */ }
       const isClosed = clinicStatus === 'closed' || clinicStatus === 'break'
       if (isClosed && availabilityFilter === 'today') return false
 
@@ -2362,7 +2365,7 @@ function HomePage({ doctors, loading, notice, ui }) {
 
       return matchesSearch && matchesSpecialty && matchesGender && matchesAvailability && matchesPrice
     })
-  }, [doctors, searchTerm, selectedSpecialty, genderFilter, availabilityFilter, priceFilter])
+  }, [doctors, searchTerm, selectedSpecialty, genderFilter, availabilityFilter, priceFilter, clinicStatusNonce])
 
   const localizedDoctors = useMemo(
     () => filteredDoctors.map(doctor => localizeDoctor(ui.language, doctor)),
@@ -3943,12 +3946,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[].map(item => (
-                <div key={item.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-                  <p className="text-[11px] uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">{item.label}</p>
-                  <p className={`mt-2 text-lg font-semibold ${item.tone}`}>{item.value}</p>
-                </div>
-              ))}
+              {/* reserved for live intake metrics */}
             </div>
 
             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
@@ -4286,7 +4284,7 @@ function ReviewPage({ ui }) {
                   <span className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
                     {t('reviewLockedCaption')}
                   </span>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass(appointment.status)}`}>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${(STATUS_CONFIG[appointment.status]?.className) || 'border-slate-300/30 bg-slate-500/10 text-slate-600 dark:text-slate-200'}`}>
                     {localizeAppointmentStatus(ui.language, appointment.status)}
                   </span>
                 </div>
@@ -4503,29 +4501,6 @@ function DashboardAccessPage({ ui }) {
     }
   }
 
-  const handleToggleStatus = async appointment => {
-    if (!resolvedDoctor?.id) return
-    const nextStatus = cycleAppointmentStatus(appointment.status)
-    const previousStatus = appointment.status
-    const isLocal = String(appointment.id || '').startsWith('local-') || appointment.source === 'local'
-    if (isLocal) {
-      setAppointments(prev => prev.map(item => (item.id === appointment.id ? { ...item, status: nextStatus } : item)))
-      updateLocalAppointmentStatus(appointment.id, nextStatus)
-      setActionNotice(`${t('statusUpdated')}: ${appointment.patient_name}`)
-      return
-    }
-    setAppointments(prev => prev.map(item => (item.id === appointment.id ? { ...item, status: nextStatus } : item)))
-    setActionNotice('')
-    try {
-      const { error } = await supabase.from('appointments').update({ status: nextStatus }).eq('id', appointment.id)
-      if (error) throw error
-      setActionNotice(`${t('statusUpdated')}: ${appointment.patient_name}`)
-    } catch (error) {
-      setAppointments(prev => prev.map(item => (item.id === appointment.id ? { ...item, status: previousStatus } : item)))
-      setActionNotice(error instanceof Error ? error.message : t('errorTitle'))
-    }
-  }
-
   // No doctor yet — show full-screen code entry
   if (!resolvedDoctor) {
     return (
@@ -4630,7 +4605,6 @@ function DashboardAccessPage({ ui }) {
           appointmentsLoading={appointmentsLoading}
           appointmentsNotice={appointmentsNotice}
           ui={ui}
-          onToggleStatus={handleToggleStatus}
         />
       </section>
     </AppShell>
@@ -4686,7 +4660,7 @@ const MONTHLY_REVENUE = [
   { month: 'إبريل', revenue: 39200, target: 38000 },
 ]
 
-function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointments, appointmentsLoading, appointmentsNotice, ui, onToggleStatus }) {
+function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointments, appointmentsLoading, appointmentsNotice, ui }) {
   const t = key => getText(ui.language, key)
   const isArabic = ui.language === 'ar'
   const navigate = useNavigate()
@@ -4696,7 +4670,8 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointme
 
   // Load initial clinic status from localStorage
   useEffect(() => {
-    const saved = doctor?.id ? window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) : null
+    let saved = null
+    try { saved = doctor?.id ? window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) : null } catch (e) { /* ignore */ }
     if (saved) setClinicStatus(saved)
   }, [doctor?.id])
   const [delayModal, setDelayModal] = useState({ open: false, appointment: null, doctorName: '' })
@@ -4947,7 +4922,7 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointme
             {/* Clinic Status Toggle */}
             <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/5">
               {['open', 'break', 'closed'].map(s => (
-                <button key={s} type="button" onClick={() => { setClinicStatus(s); if (doctor?.id) window.localStorage.setItem(`hihya-clinic-status-${doctor.id}`, s) }}
+                <button key={s} type="button" onClick={() => { setClinicStatus(s); try { if (doctor?.id) { window.localStorage.setItem(`hihya-clinic-status-${doctor.id}`, s); window.dispatchEvent(new CustomEvent('clinic-status-changed')) } } catch (e) { /* ignore */ } }}
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${clinicStatus === s
                     ? s === 'open' ? 'bg-emerald-500 text-white' : s === 'break' ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'
                     : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400'}`}
