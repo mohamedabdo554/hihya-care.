@@ -1563,10 +1563,12 @@ function resolveRecommendedDoctors(snapshot, parsed) {
     return { doctors: [], missingSpecialty: missing }
   }
 
+  const specialtyHint = String(parsed?.specialty_hint || parsed?.specialty || '').trim()
+
   const idRaw = parsed?.recommended_doctor_id
   if (idRaw != null && String(idRaw).trim() !== '') {
     const found = snapshot.find(doctor => String(doctor.id) === String(idRaw).trim())
-    if (found) {
+    if (found && (!specialtyHint || specialtyHintMatches(specialtyHint, found))) {
       return { doctors: [found], missingSpecialty: '' }
     }
   }
@@ -1580,14 +1582,20 @@ function resolveRecommendedDoctors(snapshot, parsed) {
         const hay = normalizeCoordinatorMatchKey(doctor.name)
         return hay && needle && (hay.includes(needle) || needle.includes(hay))
       })
-    if (found) {
+    if (found && (!specialtyHint || specialtyHintMatches(specialtyHint, found))) {
       return { doctors: [found], missingSpecialty: '' }
     }
   }
 
-  const specialtyHint = String(parsed?.specialty_hint || parsed?.specialty || '').trim()
-  const fallback = pickCoordinatorDoctors(snapshot, specialtyHint).slice(0, 1)
-  return { doctors: fallback, missingSpecialty: '' }
+  if (specialtyHint) {
+    const fallback = pickCoordinatorDoctors(snapshot, specialtyHint).slice(0, 1)
+    if (fallback.length) {
+      return { doctors: fallback, missingSpecialty: '' }
+    }
+    return { doctors: [], missingSpecialty: specialtyHint }
+  }
+
+  return { doctors: [], missingSpecialty: '' }
 }
 
 function parseCoordinatorJsonFromText(modelText) {
@@ -1930,13 +1938,13 @@ function AppShell({ children, ui }) {
             </Link>
 
             <div className="flex items-center gap-1 sm:gap-2">
-              <Link to="/dashboard" className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/15 to-emerald-400/15 px-3 py-1.5 text-[10px] font-semibold text-cyan-700 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.2)] dark:text-cyan-200 dark:from-cyan-500/15 dark:to-emerald-500/15">
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                {isArabic ? 'لوحة التحكم' : 'Dashboard'}
+              <Link to="/dashboard" className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/15 to-emerald-400/15 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.2)] dark:text-cyan-200 dark:from-cyan-500/15 dark:to-emerald-500/15 sm:px-3">
+                <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                <span className="hidden sm:inline">{isArabic ? 'لوحة التحكم' : 'Dashboard'}</span>
               </Link>
-              <Link to="/" className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-violet-300/25 bg-gradient-to-r from-violet-400/15 to-cyan-400/15 px-3 py-1.5 text-[10px] font-semibold text-violet-700 transition hover:shadow-[0_0_16px_rgba(139,92,246,0.2)] dark:text-violet-200 dark:from-violet-500/15 dark:to-cyan-500/15">
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                {isArabic ? 'المساعد الذكي' : 'AI Chat'}
+              <Link to="/ai-triage" className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300/25 bg-gradient-to-r from-violet-400/15 to-cyan-400/15 px-2 py-1.5 text-[10px] font-semibold text-violet-700 transition hover:shadow-[0_0_16px_rgba(139,92,246,0.2)] dark:text-violet-200 dark:from-violet-500/15 dark:to-cyan-500/15 sm:px-3">
+                <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                <span className="hidden sm:inline">{isArabic ? 'المساعد الذكي' : 'AI Chat'}</span>
               </Link>
               <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:hidden">
                 <button
