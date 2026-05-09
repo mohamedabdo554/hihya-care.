@@ -4934,7 +4934,20 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointme
   }
 
   const sendConfirmMsg = (appt) => {
-    const msg = `السلام عليكم ${appt.patient_name} 🌿 تم تأكيد موعدك مع د. ${doctor?.name || 'الطبيب'}. نستقبلكم في العيادة.`
+    const todayStr = new Date().toDateString()
+    const queueNum = appointments.filter(a =>
+      a.status === 'Pending' && new Date(a.appointment_date).toDateString() === todayStr
+    ).findIndex(a => a.id === appt.id) + 1
+    const dateStr = appt.appointment_date
+      ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      : ''
+    const clinicLink = doctor?.clinic_link || ''
+    const doctorName = doctor?.name || 'الطبيب'
+    const msg = `أهلاً أستاذ ${appt.patient_name}، تم تسجيل حجزك بنجاح في عيادة دكتور ${doctorName}.
+🗓️ الموعد: ${dateStr}
+🔢 رقمك في القائمة: ${queueNum}
+📍 الموقع: ${clinicLink}
+نتمنى لك الشفاء العاجل.`
     openWhatsApp(appt.phone || appt.patient_phone, msg)
     setToast(`تم إرسال تأكيد إلى ${appt.patient_name}`)
   }
