@@ -3820,26 +3820,36 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
     // Also try saving to Supabase (best-effort)
     try {
-      const { error } = await supabase.from('appointments').insert([
-        {
-          patient_name: trimmedName,
-          patient_phone: trimmedPhone,
-          doctor_id: doctorId,
-          patient_id: session?.user?.id ?? null,
-          appointment_date: appointmentIso,
-          appointment_time: appointmentTime,
-          status: 'Pending',
-          patient_age: intakeData.age || null,
-          patient_gender: intakeData.gender || null,
-          symptoms: [
-            intakeData.age ? `العمر: ${intakeData.age}` : '',
-            intakeData.gender ? `النوع: ${intakeData.gender}` : '',
-            trimmedSymptoms,
-            attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
-          ].filter(Boolean).join('\n') || null,
-        },
-      ])
-      if (error) console.error('[Booking] Supabase insert error:', error)
+      const supabasePayload = {
+        patient_name: trimmedName,
+        patient_phone: trimmedPhone,
+        doctor_id: doctorId,
+        patient_id: session?.user?.id ?? null,
+        appointment_date: appointmentIso,
+        appointment_time: appointmentTime,
+        status: 'Pending',
+        symptoms: [
+          intakeData.age ? `العمر: ${intakeData.age}` : '',
+          intakeData.gender ? `النوع: ${intakeData.gender}` : '',
+          trimmedSymptoms,
+          attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
+        ].filter(Boolean).join('\n') || null,
+      }
+      // If columns exist in Supabase, include them
+      if (intakeData.age) supabasePayload.patient_age = intakeData.age
+      if (intakeData.gender) supabasePayload.patient_gender = intakeData.gender
+      const { error } = await supabase.from('appointments').insert([supabasePayload])
+      if (error) {
+        // If columns don't exist yet, retry without them
+        if (error.message?.includes('patient_age') || error.message?.includes('patient_gender')) {
+          delete supabasePayload.patient_age
+          delete supabasePayload.patient_gender
+          const { error: retryErr } = await supabase.from('appointments').insert([supabasePayload])
+          if (retryErr) console.error('[Booking] Supabase retry error:', retryErr)
+        } else {
+          console.error('[Booking] Supabase insert error:', error)
+        }
+      }
     } catch (supaErr) {
       console.error('[Booking] Supabase insert exception:', supaErr)
     }
