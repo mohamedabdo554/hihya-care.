@@ -1904,7 +1904,7 @@ function AppShell({ children, ui }) {
   const isDark = theme === 'dark'
 
   return (
-    <main className={`relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 ${themePulse ? 'theme-fade' : ''}`}>
+    <main className={`relative min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-[#020617] dark:text-slate-100 ${themePulse ? 'theme-fade' : ''}`}>
       <style>{`
         @keyframes floatSoft {
           0%, 100% { transform: translateY(0); }
@@ -1924,7 +1924,7 @@ function AppShell({ children, ui }) {
       <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-400/20" />
       <div className="absolute right-10 top-24 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-500/10" />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+        <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <header className="sticky top-2 z-30 mb-3 rounded-2xl border border-slate-200/80 bg-white/92 px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-slate-950/72 dark:shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:top-3 sm:mb-4 sm:px-4 sm:py-2.5 sm:rounded-3xl">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <Link to="/" className="flex items-center gap-2 text-slate-900 dark:text-cyan-100">
