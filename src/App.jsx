@@ -853,6 +853,21 @@ async function filesToAttachments(files) {
   return results
 }
 
+function parseAppointmentAttachments(symptoms) {
+  if (!symptoms || typeof symptoms !== 'string') return []
+  const idx = symptoms.indexOf('__FILES__')
+  if (idx === -1) return []
+  return symptoms.slice(idx + 9).split('||').map(s => {
+    try { return JSON.parse(decodeURIComponent(s)) } catch { return null }
+  }).filter(Boolean)
+}
+
+function stripFileDataFromSymptoms(symptoms) {
+  if (!symptoms || typeof symptoms !== 'string') return symptoms
+  const idx = symptoms.indexOf('__FILES__')
+  return idx === -1 ? symptoms : symptoms.slice(0, idx).replace(/\n$/, '')
+}
+
 function createLocalAppointment(doctorId, patientName, phone, appointmentDateIso, symptoms) {
   const iso =
     appointmentDateIso && !Number.isNaN(new Date(appointmentDateIso).getTime())
@@ -3488,15 +3503,20 @@ function useAppointmentsByDoctorId(doctorId, language) {
           .order('appointment_date', { ascending: true })
 
         if (!error && Array.isArray(data)) {
-          const remoteAppointments = data.map((appointment, index) => ({
-            ...appointment,
-            id: appointment.id ?? `${appointment.doctor_id}-${index}`,
-            status: appointment.status || 'Pending',
-            appointment_date: appointment.appointment_date || new Date().toISOString(),
-            appointment_time: appointment.appointment_time || '09:00',
-            phone: appointment.patient_phone || '',
-            fees: Number(appointment.fees ?? 0) || 0,
-          }))
+          const remoteAppointments = data.map((appointment, index) => {
+            const atts = parseAppointmentAttachments(appointment.symptoms)
+            return {
+              ...appointment,
+              id: appointment.id ?? `${appointment.doctor_id}-${index}`,
+              status: appointment.status || 'Pending',
+              appointment_date: appointment.appointment_date || new Date().toISOString(),
+              appointment_time: appointment.appointment_time || '09:00',
+              phone: appointment.patient_phone || '',
+              fees: Number(appointment.fees ?? 0) || 0,
+              symptoms: stripFileDataFromSymptoms(appointment.symptoms),
+              attachments: atts.length ? atts : undefined,
+            }
+          })
 
           const localAppointments = getLocalAppointmentsForDoctor(doctorId).map((appointment, index) => ({
             ...appointment,
@@ -3820,6 +3840,16 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
     // Also try saving to Supabase (best-effort)
     try {
+      const symptomsParts = [
+        intakeData.age ? `العمر: ${intakeData.age}` : '',
+        intakeData.gender ? `النوع: ${intakeData.gender}` : '',
+        trimmedSymptoms,
+        attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
+      ]
+      // Embed attachment base64 data in symptoms so it travels cross-device
+      if (attachments.length) {
+        symptomsParts.push('__FILES__' + attachments.map(a => encodeURIComponent(JSON.stringify({ name: a.name, data: a.data, size: a.size }))).join('||'))
+      }
       const supabasePayload = {
         patient_name: trimmedName,
         patient_phone: trimmedPhone,
@@ -3828,12 +3858,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         appointment_date: appointmentIso,
         appointment_time: appointmentTime,
         status: 'Pending',
-        symptoms: [
-          intakeData.age ? `العمر: ${intakeData.age}` : '',
-          intakeData.gender ? `النوع: ${intakeData.gender}` : '',
-          trimmedSymptoms,
-          attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
-        ].filter(Boolean).join('\n') || null,
+        symptoms: symptomsParts.filter(Boolean).join('\n') || null,
       }
       // If columns exist in Supabase, include them
       if (intakeData.age) supabasePayload.patient_age = intakeData.age
