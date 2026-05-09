@@ -458,7 +458,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Near the old National Bank, next to Dr. Gomaa Pharmacy',
     clinicLocation_ar: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
     clinic_link: 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
-    phone_number: null,
+    phone_number: '+201000000001',
     secret_code: 'HC-2026',
   },
   {
@@ -562,7 +562,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'El-Gomhoreya St, Hehya (MHFQ+C7M)',
     clinicLocation_ar: 'شارع الجمهورية، ههيا (MHFQ+C7M)',
     clinic_link: 'https://maps.google.com/?q=MHFQ%2BC7M%2C%20El-Gomhoreya%20St%2C%20Hehya',
-    phone_number: null,
+    phone_number: '+201000000002',
     secret_code: 'HC-5638',
   },
   {
@@ -586,7 +586,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Chest Diseases Clinic - Hehya',
     clinicLocation_ar: 'عيادة أمراض صدرية - ههيا',
     clinic_link: 'https://maps.app.goo.gl/u5AGRUgwBN8dfWoZ8',
-    phone_number: null,
+    phone_number: '+201000000003',
     secret_code: 'HC-4407',
   },
   {
@@ -610,7 +610,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Cardiology & Cath Clinic - Hehya',
     clinicLocation_ar: 'عيادة القلب والقسطرة - ههيا',
     clinic_link: 'https://maps.app.goo.gl/YGaht1rGot6deUxT9',
-    phone_number: null,
+    phone_number: '+201000000004',
     secret_code: 'HC-7814',
   },
   {
@@ -634,7 +634,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Dermatology & Cosmetic Clinic - Hehya',
     clinicLocation_ar: 'عيادة الجلدية والتجميل - ههيا',
     clinic_link: 'https://maps.app.goo.gl/pUS1XXoEm4QsKpnTA',
-    phone_number: null,
+    phone_number: '+201000000005',
     secret_code: 'HC-6024',
   },
   {
@@ -658,7 +658,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Ahmed Oraby St, near El Salam Pharmacy',
     clinicLocation_ar: 'شارع أحمد عرابي، بجوار صيدلية السلام',
     clinic_link: 'https://maps.app.goo.gl/iU3GrsV32xBkPuVG8',
-    phone_number: null,
+    phone_number: '+201000000006',
     secret_code: 'HC-9142',
   },
   {
@@ -682,7 +682,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Omar Ibn El-Khattab St, near the old post office',
     clinicLocation_ar: 'شارع عمر بن الخطاب، بجوار البوسطة القديمة',
     clinic_link: 'https://maps.app.goo.gl/93n78fzvK2kn9RJf7',
-    phone_number: null,
+    phone_number: '+201000000007',
     secret_code: 'HC-4059',
   },
   {
@@ -706,7 +706,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Internal Medicine Clinic - Hehya',
     clinicLocation_ar: 'عيادة باطنة - ههيا',
     clinic_link: 'https://maps.app.goo.gl/9wgUonjix6pBc7PR9',
-    phone_number: null,
+    phone_number: '+201000000008',
     secret_code: 'HC-5526',
   },
   {
@@ -730,7 +730,7 @@ const fallbackDoctors = [
     clinicLocation_en: 'Radiology Center - Hehya',
     clinicLocation_ar: 'مركز أشعة - ههيا',
     clinic_link: 'https://maps.app.goo.gl/ktCbMDAiQ9iDBd4Z7',
-    phone_number: null,
+    phone_number: '+201000000009',
     secret_code: 'HC-3380',
   },
 ]
@@ -1162,7 +1162,14 @@ function getText(language, key, ...args) {
 }
 
 function normalizePhoneForWa(phoneNumber) {
-  return String(phoneNumber || '').replace(/[^\d]/g, '')
+  const digits = String(phoneNumber || '').replace(/[^\d]/g, '')
+  if (!digits) return ''
+  // Egyptian numbers: 01xxxxxxxxx → 201xxxxxxxxx
+  if (digits.startsWith('01') && digits.length === 11) return '2' + digits.slice(1)
+  // Already has country code (e.g. 201xxxxxxxxx)
+  if (digits.startsWith('2') && digits.length === 12) return digits
+  // Generic: just return digits
+  return digits
 }
 
 function parseClinicImages(value) {
