@@ -12,6 +12,7 @@ import {
   Clock,
   Clock3,
   DollarSign,
+  FileText,
   HeartPulse,
   Loader2,
   Menu,
@@ -46,6 +47,7 @@ import {
 import { supabase } from '../../supabaseClient'
 import { ErrorBoundary } from '../ErrorBoundary'
 import { useTriage } from '../../context/TriageContext'
+import PrescriptionModal from '../PrescriptionModal'
 
 type Appointment = {
   id: string
@@ -230,6 +232,7 @@ export function DoctorDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [ehrPatient, setEhrPatient] = useState<Appointment | null>(null)
   const [emergencyMode, setEmergencyMode] = useState(false)
+  const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; appointment: Appointment | null }>({ open: false, appointment: null })
   const [delayModal, setDelayModal] = useState<{ open: boolean; appointment: Appointment | null }>({ open: false, appointment: null })
   const [, setDelayMinutes] = useState(15)
 
@@ -534,6 +537,11 @@ export function DoctorDashboard() {
                               <button type="button" onClick={() => void updateAppointmentStatus(appointment.id, 'no_show')} disabled={actionLoading || appointment.status === 'no_show'} className="rounded-lg border border-slate-400/20 bg-slate-500/10 px-2 py-1.5 text-[10px] font-semibold text-slate-200 hover:bg-slate-500/20 disabled:opacity-40">غائب</button>
                             </div>
 
+                            {/* Prescription Button */}
+                            <button type="button" onClick={() => setPrescriptionModal({ open: true, appointment })} className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2 py-1.5 text-[10px] font-semibold text-blue-200 hover:bg-blue-500/20">
+                              <FileText className="h-3 w-3 inline" /> روشتة
+                            </button>
+
                             {/* Mini-EHR Button */}
                             <button type="button" onClick={() => setEhrPatient(ehrPatient?.id === appointment.id ? null : appointment)} className={`rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition ${ehrPatient?.id === appointment.id ? 'border-violet-400/30 bg-violet-500/20 text-violet-200' : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10'}`}>
                               {ehrPatient?.id === appointment.id ? 'إخفاء' : 'ملف'}
@@ -739,6 +747,15 @@ export function DoctorDashboard() {
             </div>
           ) : null}
         </AnimatePresence>
+
+        {/* Prescription Modal */}
+        {prescriptionModal.open && prescriptionModal.appointment && doctor && (
+          <PrescriptionModal
+            doctor={doctor}
+            appointment={prescriptionModal.appointment}
+            onClose={() => setPrescriptionModal({ open: false, appointment: null })}
+          />
+        )}
       </div>
     </ErrorBoundary>
   )

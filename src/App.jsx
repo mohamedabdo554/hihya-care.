@@ -24,11 +24,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { ArrowLeft, Clock, Mail, MapPin, MessageCircleMore, Phone, Sparkles, Stethoscope, Star, Wallet, HeartPulse, Activity, AlertTriangle, CheckCircle2, XCircle, UserRound, MessageCircle, DollarSign, TrendingUp, Clock3, Users, ScanLine, ShieldCheck, BarChart3, Loader2, TriangleAlert, CalendarCheck, CalendarDays, Smile, PhoneCall } from 'lucide-react'
+import { ArrowLeft, Clock, FileText, Mail, MapPin, MessageCircleMore, Phone, Sparkles, Stethoscope, Star, Wallet, HeartPulse, Activity, AlertTriangle, CheckCircle2, XCircle, UserRound, MessageCircle, DollarSign, TrendingUp, Clock3, Users, ScanLine, ShieldCheck, BarChart3, Loader2, TriangleAlert, CalendarCheck, CalendarDays, Smile, PhoneCall, PawPrint } from 'lucide-react'
 import DoctorAvailabilityShowcase from './components/DoctorAvailabilityShowcase.jsx'
 import ReviewFeedbackCard from './components/ReviewFeedbackCard.jsx'
 import AppointmentConfirmationPage from './components/AppointmentConfirmationPage.jsx'
 import MedicalFileUploader from './components/MedicalFileUploader.jsx'
+import PrescriptionModal from './components/PrescriptionModal.jsx'
 import { buildMedicalCoordinatorJsonPrompt } from './components/geminiService.js'
 import { supabase } from './supabaseClient.js'
 
@@ -37,6 +38,7 @@ const PremiumDoctorProfile = lazy(() => import('./components/PremiumDoctorProfil
 const CinematicAnalyticsDashboard = lazy(() => import('./components/CinematicAnalyticsDashboard.jsx'))
 const AITriageChat = lazy(() => import('./components/ai/AITriageChat.tsx'))
 const DoctorDashboard = lazy(() => import('./components/dashboard/DoctorDashboard.tsx'))
+const GatewayScreen = lazy(() => import('./components/GatewayScreen.jsx'))
 import { TriageProvider } from './context/TriageContext'
 
 function RouteFallback({ ui }) {
@@ -733,6 +735,38 @@ const fallbackDoctors = [
     phone_number: '+201000000009',
     secret_code: 'HC-3380',
   },
+  {
+    id: 'al-rahma-pet-clinic',
+    name: 'Al Rahma Pet Clinic',
+    name_en: 'Al Rahma Pet Clinic',
+    name_ar: 'عيادة الرحمة البيطرية',
+    specialty: 'Pet Medicine & Surgery (Cats & Dogs)',
+    specialty_en: 'Pet Medicine & Surgery (Cats & Dogs)',
+    specialty_ar: 'طب وجراحة الحيوانات الأليفة (قطط وكلاب)',
+    specialties: ['بيطري', 'قطط', 'كلاب', 'جراحة', 'باطنة'],
+    category: 'veterinary',
+    veterinary_team: [
+      { name: 'Mahmoud Rasmy', name_ar: 'محمود رسمي', specialty: 'Surgery', specialty_ar: 'جراحة' },
+      { name: 'Abdulrahman El-Gammal', name_ar: 'عبدالرحمن الجمال', specialty: 'Internal Medicine', specialty_ar: 'باطنة' },
+    ],
+    image_url: null,
+    bio: 'عيادة بيطرية متخصصة في علاج القطط والكلاب فقط. تضم فريقاً من 2 أطباء: جراحة وباطنة.',
+    bio_en: 'A veterinary clinic specialized in cats & dogs only. Team of 2 doctors: surgery & internal medicine.',
+    bio_ar: 'عيادة بيطرية متخصصة في علاج القطط والكلاب فقط. تضم فريقاً من 2 أطباء: جراحة وباطنة.',
+    price: 'الكشف 80 ج - التطعیمات حسب النوع',
+    price_value: 80,
+    clinicLocation: 'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
+    clinicLocation_en: 'Madafet El-Markaz St, behind the registry, second left',
+    clinicLocation_ar: 'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
+    clinic_link: 'https://maps.google.com/maps?q=30.6733874%2C31.5864982&z=17&hl=en',
+    phone_number: '+201028423304',
+    facebook_url: 'https://www.facebook.com/share/18gX5Uh1r2/?mibextid=wwXIfr',
+    working_days: 'جميع أيام الأسبوع حتی الجمعة (الجمعة غير ثابتة)',
+    working_hours: 'من 2 ظهراً إلى 11 مساءً',
+    payment_method: 'كاش - فودافون كاش',
+    rescue_discount: 'خصم 50 ج على الكشف والعلاج لحالات الإنقاذ',
+    secret_code: 'HC-VET01',
+  },
 ]
 
 const fallbackAppointmentsByDoctor = {
@@ -1220,6 +1254,14 @@ function makeDoctorFromRow(row) {
     next_available_slot: row.next_available_slot ?? null,
     rating: row.rating != null ? Number(row.rating) : null,
     reviews_count: row.reviews_count != null ? Number(row.reviews_count) : null,
+    category: row.category || 'human',
+    veterinary_team: Array.isArray(row.veterinary_team) ? row.veterinary_team : [],
+    veterinaryTeam: Array.isArray(row.veterinary_team) ? row.veterinary_team : [],
+    facebook_url: row.facebook_url || null,
+    working_days: row.working_days || null,
+    working_hours: row.working_hours || null,
+    payment_method: row.payment_method || null,
+    rescue_discount: row.rescue_discount || null,
   }
 }
 
@@ -1630,9 +1672,9 @@ function parseCoordinatorJsonFromText(modelText) {
   }
 }
 
-async function fetchCoordinatorJsonWithGemini(prompt, apiKey) {
+async function fetchCoordinatorJsonWithGemini(systemPrompt, userPrompt, apiKey) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 6000)
+  const timeout = setTimeout(() => controller.abort(), 8000)
 
   try {
     const response = await fetch(
@@ -1641,7 +1683,8 @@ async function fetchCoordinatorJsonWithGemini(prompt, apiKey) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ parts: [{ text: userPrompt }] }],
           generationConfig: {
             temperature: 0.2,
             maxOutputTokens: 1536,
@@ -1662,7 +1705,7 @@ async function fetchCoordinatorJsonWithGemini(prompt, apiKey) {
   }
 }
 
-async function fetchCoordinatorJsonWithGroq(prompt, apiKey) {
+async function fetchCoordinatorJsonWithGroq(systemPrompt, userPrompt, apiKey) {
   const model = String(import.meta.env.VITE_GROQ_MODEL || '').trim() || 'llama-3.3-70b-versatile'
   const url = 'https://api.groq.com/openai/v1/chat/completions'
   const headers = {
@@ -1671,13 +1714,13 @@ async function fetchCoordinatorJsonWithGroq(prompt, apiKey) {
   }
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 6000)
+  const timeout = setTimeout(() => controller.abort(), 8000)
 
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: 1400, response_format: { type: 'json_object' } }),
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], temperature: 0.2, max_tokens: 1400, response_format: { type: 'json_object' } }),
       signal: controller.signal,
     })
     clearTimeout(timeout)
@@ -1691,14 +1734,14 @@ async function fetchCoordinatorJsonWithGroq(prompt, apiKey) {
   }
 }
 
-async function fetchMedicalCoordinatorJson(prompt) {
+async function fetchMedicalCoordinatorJson(systemPrompt, userPrompt) {
   const geminiKey = String(import.meta.env.VITE_GEMINI_API_KEY || '').trim()
   const groqKey = String(import.meta.env.VITE_GROQ_API_KEY || '').trim()
   if (geminiKey) {
-    return fetchCoordinatorJsonWithGemini(prompt, geminiKey)
+    return fetchCoordinatorJsonWithGemini(systemPrompt, userPrompt, geminiKey)
   }
   if (groqKey) {
-    return fetchCoordinatorJsonWithGroq(prompt, groqKey)
+    return fetchCoordinatorJsonWithGroq(systemPrompt, userPrompt, groqKey)
   }
   return null
 }
@@ -1807,6 +1850,14 @@ function App() {
   const [doctors, setDoctors] = useState([])
   const [loadingDoctors, setLoadingDoctors] = useState(true)
   const [doctorsNotice, setDoctorsNotice] = useState('')
+  const [section, setSection] = useState(() => {
+    try { return localStorage.getItem('hihya-section') || null } catch { return null }
+  })
+
+  const handleSetSection = (s) => {
+    setSection(s)
+    try { localStorage.setItem('hihya-section', s) } catch { }
+  }
 
   // Diagnose Supabase connection
   useEffect(() => {
@@ -1863,7 +1914,10 @@ function App() {
           if (error) setDoctorsNotice(`${getText(language, 'fallbackNotice')} (${error.message})`)
           else setDoctorsNotice(getText(language, 'fallbackNotice'))
         } else {
-          setDoctors(data.map(makeDoctorFromRow))
+          const supabaseDoctors = data.map(makeDoctorFromRow)
+          const hasVet = supabaseDoctors.some(d => d.id === 'al-rahma-pet-clinic')
+          const vetClinic = createFallbackDoctor('al-rahma-pet-clinic')
+          setDoctors(hasVet ? supabaseDoctors : [...supabaseDoctors, vetClinic].filter(Boolean))
         }
       } catch (err) {
         if (active) {
@@ -1890,6 +1944,22 @@ function App() {
     setLanguage,
     setTheme,
     themePulse,
+    section,
+    setSection: handleSetSection,
+  }
+
+  if (!section) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TriageProvider>
+            <Suspense fallback={<RouteFallback ui={ui} />}>
+              <GatewayScreen onSelect={handleSetSection} />
+            </Suspense>
+          </TriageProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    )
   }
 
   return (
@@ -1908,8 +1978,9 @@ function App() {
             <Route path="/dashboard" element={<DashboardAccessPage ui={ui} />} />
             <Route path="/review/:appointmentId" element={<ReviewPage ui={ui} />} />
             <Route path="/dashboard/:doctorId" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/ai-triage" element={<AITriageChat />} />
+            <Route path="/ai-triage" element={<AITriageChat section={section} />} />
             <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+            <Route path="/prescription/:id" element={<PrescriptionPublicView />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
@@ -1920,7 +1991,7 @@ function App() {
 }
 
 function AppShell({ children, ui }) {
-  const { language, theme, setLanguage, setTheme, themePulse = false } = ui
+  const { language, theme, setLanguage, setTheme, themePulse = false, section, setSection } = ui
   const t = key => getText(language, key)
   const isArabic = language === 'ar'
   const isDark = theme === 'dark'
@@ -1968,6 +2039,29 @@ function AppShell({ children, ui }) {
                 <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                 <span className="hidden sm:inline">{isArabic ? 'المساعد الذكي' : 'AI Chat'}</span>
               </Link>
+              {/* Section Toggle */}
+              <button
+                type="button"
+                onClick={() => setSection(section === 'veterinary' ? 'human' : 'veterinary')}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-2 py-1.5 text-[10px] font-semibold transition sm:px-3 ${
+                  section === 'veterinary'
+                    ? 'border-emerald-300/30 bg-gradient-to-r from-emerald-400/20 to-teal-400/20 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                    : 'border-blue-300/25 bg-gradient-to-r from-blue-400/15 to-cyan-400/15 text-blue-200'
+                }`}
+                title={section === 'veterinary' ? (isArabic ? 'التبديل للعيادات البشرية' : 'Switch to Human') : (isArabic ? 'التبديل للطب البيطري' : 'Switch to Veterinary')}
+              >
+                {section === 'veterinary' ? (
+                  <>
+                    <Stethoscope className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{isArabic ? 'بشري' : 'Human'}</span>
+                  </>
+                ) : (
+                  <>
+                    <PawPrint className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{isArabic ? 'بيطري' : 'Vet'}</span>
+                  </>
+                )}
+              </button>
               <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:hidden">
                 <button
                   type="button"
@@ -2339,6 +2433,7 @@ function DoctorAvailabilityItem({ doctor, ui, labels }) {
 function HomePage({ doctors, loading, notice, ui }) {
   const t = key => getText(ui.language, key)
   const isArabic = ui.language === 'ar'
+  const activeSection = ui.section || 'human'
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSpecialty, setSelectedSpecialty] = useState('')
   const [genderFilter, setGenderFilter] = useState('all')
@@ -2361,10 +2456,13 @@ function HomePage({ doctors, loading, notice, ui }) {
     [],
   )
 
+  const vetDoctors = useMemo(() => doctors.filter(d => d.category === 'veterinary'), [doctors])
+
   const filteredDoctors = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
 
     return doctors.filter(doctor => {
+      if (doctor.category === 'veterinary') return false
       const nameValues = [doctor.name, doctor.name_en, doctor.name_ar]
         .filter(Boolean)
         .map(value => String(value).toLowerCase())
@@ -2402,222 +2500,272 @@ function HomePage({ doctors, loading, notice, ui }) {
     [filteredDoctors, ui.language],
   )
 
+  const localizedVetDoctors = useMemo(
+    () => vetDoctors.map(doctor => localizeDoctor(ui.language, doctor)),
+    [vetDoctors, ui.language],
+  )
+
   return (
     <AppShell ui={ui}>
       <section className="animate-[fadeIn_0.6s_ease-out]">
-        <div className="relative mx-auto mb-4 max-w-3xl overflow-hidden rounded-2xl border border-violet-200/40 bg-gradient-to-br from-violet-500/[0.06] via-transparent to-cyan-500/[0.06] p-px shadow-[0_16px_48px_rgba(91,33,182,0.1)] dark:border-white/10 dark:from-violet-500/10 dark:to-cyan-500/10 dark:shadow-[0_14px_40px_rgba(0,0,0,0.28)]">
-          <MedicalCoordinatorPanel ui={ui} variant="hero" />
-        </div>
-
-        <div className="mx-auto mb-4 flex max-w-3xl flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/85 p-3 text-[11px] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-slate-200 sm:p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-1 flex-wrap gap-2 md:items-center">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-50 dark:bg-slate-50 dark:text-slate-900">
-                {isArabic ? 'النوع' : 'Gender'}
-              </span>
-              <div className="inline-flex rounded-full bg-slate-100/80 p-1 text-[11px] dark:bg-slate-900/70">
-                {[
-                  { value: 'all', label: isArabic ? 'الكل' : 'All' },
-                  { value: 'female', label: isArabic ? 'دكتورة' : 'Female' },
-                  { value: 'male', label: isArabic ? 'دكتور' : 'Male' },
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setGenderFilter(option.value)}
-                    className={`rounded-full px-2.5 py-1 font-semibold transition ${
-                      genderFilter === option.value
-                        ? 'bg-slate-900 text-slate-50 shadow-sm dark:bg-slate-50 dark:text-slate-900'
-                        : 'text-slate-600 hover:bg-slate-200/80 dark:text-slate-300 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+        {activeSection === 'veterinary' ? (
+          <>
+            {/* Veterinary Mode Header */}
+            <div className="mx-auto mb-6 max-w-3xl text-center">
+              <div className="inline-flex items-center gap-2 rounded-full border-2 border-amber-400/40 bg-gradient-to-r from-amber-500/25 to-orange-500/20 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-amber-500/20">
+                <PawPrint className="h-4 w-4" />
+                {isArabic ? 'قسم الطب البيطري' : 'Veterinary Medicine'}
+              </div>
+              <h2 className="mt-4 text-4xl font-extrabold text-white drop-shadow-lg">
+                {isArabic ? 'العيادات البيطرية' : 'Veterinary Clinics'}
+              </h2>
+              <p className="mt-1 text-lg font-bold text-amber-100">
+                {isArabic ? 'أفضل العيادات البيطرية في ههيا' : 'Top veterinary clinics in Hehya'}
+              </p>
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-amber-400/20 bg-amber-500/15 px-4 py-1.5 text-sm font-bold text-amber-50 shadow-sm">
+                <span>🕐</span>
+                {isArabic ? 'حجز مرن – احجز موعدك مباشرة مع العيادة' : 'Flexible booking – book directly with the clinic'}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-50 dark:bg-slate-50 dark:text-slate-900">
-                {isArabic ? 'المواعيد المتاحة' : 'Availability'}
-              </span>
-              <div className="inline-flex flex-wrap gap-1 text-[11px]">
-                {[
-                  { value: 'all', label: isArabic ? 'الكل' : 'All' },
-                  { value: 'today', label: isArabic ? 'اليوم' : 'Today' },
-                  { value: 'tomorrow', label: isArabic ? 'غداً' : 'Tomorrow' },
-                  { value: 'this-week', label: isArabic ? 'هذا الأسبوع' : 'This week' },
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setAvailabilityFilter(option.value)}
-                    className={`rounded-full border px-2.5 py-1 font-semibold transition ${
-                      availabilityFilter === option.value
-                        ? 'border-emerald-300/60 bg-emerald-400/15 text-emerald-900 dark:text-emerald-100'
-                        : 'border-slate-200/80 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-1 flex-wrap items-center gap-2 md:justify-end">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-50 dark:bg-slate-50 dark:text-slate-900">
-                {isArabic ? 'سعر الكشف' : 'Fee'}
-              </span>
-              <div className="inline-flex flex-wrap gap-1 text-[11px]">
-                {[
-                  { value: 'all', label: isArabic ? 'الكل' : 'All' },
-                  { value: 'lt100', label: isArabic ? 'أقل من 100' : '< 100' },
-                  { value: '100-150', label: isArabic ? '100 - 150' : '100 - 150' },
-                  { value: 'gt150', label: isArabic ? 'أعلى من 150' : '> 150' },
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setPriceFilter(option.value)}
-                    className={`rounded-full border px-2.5 py-1 font-semibold transition ${
-                      priceFilter === option.value
-                        ? 'border-sky-300/70 bg-sky-400/20 text-sky-900 dark:text-sky-100'
-                        : 'border-slate-200/80 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchTerm('')
-                setSelectedSpecialty('')
-                setGenderFilter('all')
-                setAvailabilityFilter('all')
-                setPriceFilter('all')
-              }}
-              className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-slate-950 dark:text-slate-100"
-            >
-              {isArabic ? 'مسح الفلاتر' : 'Clear filters'}
-            </button>
-          </div>
-        </div>
-
-        <p className="mb-6 text-center text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-          {isArabic ? 'اختيار الطبيب المناسب يبدأ بفهم الأعراض بدقة.' : 'Choosing the right doctor starts with clear symptom details.'}
-        </p>
-
-        {loading ? (
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-            {t('loadingDoctors')}
-          </div>
-        ) : notice ? (
-          <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-50 p-6 text-sm text-emerald-800 backdrop-blur-2xl dark:bg-emerald-500/10 dark:text-emerald-100">
-            {notice}
-          </div>
-        ) : null}
-
-        {!loading ? (
-          <div className="min-w-0">
-            <div className="order-1 min-w-0 xl:order-2">
-              <div className="mb-4 grid gap-3 rounded-[1.4rem] border border-slate-200 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-md dark:border-white/10 dark:bg-white/5 sm:grid-cols-[1fr_260px]">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
-                    {isArabic ? 'أبحث عن دكتور' : 'Search'}
-                  </p>
-                  <input
-                    value={searchTerm}
-                    onChange={event => setSearchTerm(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
-                    placeholder={isArabic ? 'أنا ابحث عن دكتور' : 'Search for a doctor'}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
-                    {isArabic ? 'اختار التخصص' : 'Select specialty'}
-                  </p>
-                  <select
-                    value={selectedSpecialty}
-                    onChange={event => setSelectedSpecialty(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
-                  >
-                    <option value="">{isArabic ? 'كل التخصصات' : 'All specialties'}</option>
-                    <optgroup label={isArabic ? 'الأكثر اختيارا' : 'Most selected'}>
-                      {specialtyGroups.popular.map(item => (
-                        <option key={`popular-${item}`} value={item}>{item}</option>
+            {!loading ? (
+              <div className="min-w-0">
+                <div className="order-1 min-w-0 xl:order-2">
+                  {localizedVetDoctors.length ? (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      {localizedVetDoctors.map((doctor, index) => (
+                        <DoctorCard key={doctor.id} doctor={doctor} index={index} ui={ui} />
                       ))}
-                    </optgroup>
-                    <optgroup label={isArabic ? 'تخصصات أخرى' : 'Other specialties'}>
-                      {specialtyGroups.other.map(item => (
-                        <option key={`other-${item}`} value={item}>{item}</option>
-                      ))}
-                    </optgroup>
-                  </select>
+                    </div>
+                  ) : (
+                    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                      {isArabic ? 'لا توجد عيادات بيطرية متاحة حالياً.' : 'No veterinary clinics available.'}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="mb-4 rounded-[1.4rem] border border-slate-200 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
-                    {isArabic ? 'الأكثر اختيارا' : 'Most selected'}
-                  </p>
-                  {selectedSpecialty ? (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSpecialty('')}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
-                    >
-                      {isArabic ? 'إزالة' : 'Clear'}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {specialtyGroups.popular.map(item => {
-                    const isActive = selectedSpecialty === item
-                    return (
+            ) : (
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                {t('loadingDoctors')}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="relative mx-auto mb-4 max-w-3xl overflow-hidden rounded-2xl border border-violet-200/40 bg-gradient-to-br from-violet-500/[0.06] via-transparent to-cyan-500/[0.06] p-px shadow-[0_16px_48px_rgba(91,33,182,0.1)] dark:border-white/10 dark:from-violet-500/10 dark:to-cyan-500/10 dark:shadow-[0_14px_40px_rgba(0,0,0,0.28)]">
+              <MedicalCoordinatorPanel ui={ui} variant="hero" />
+            </div>
+
+            <div className="mx-auto mb-4 flex max-w-3xl flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/85 p-3 text-[11px] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-slate-200 sm:p-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-1 flex-wrap gap-2 md:items-center">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-50 dark:bg-slate-50 dark:text-slate-900">
+                    {isArabic ? 'النوع' : 'Gender'}
+                  </span>
+                  <div className="inline-flex rounded-full bg-slate-100/80 p-1 text-[11px] dark:bg-slate-900/70">
+                    {[
+                      { value: 'all', label: isArabic ? 'الكل' : 'All' },
+                      { value: 'female', label: isArabic ? 'دكتورة' : 'Female' },
+                      { value: 'male', label: isArabic ? 'دكتور' : 'Male' },
+                    ].map(option => (
                       <button
-                        key={`badge-${item}`}
+                        key={option.value}
                         type="button"
-                        onClick={() => setSelectedSpecialty(item)}
-                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
-                          isActive
-                            ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-800 dark:text-cyan-100'
-                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                        onClick={() => setGenderFilter(option.value)}
+                        className={`rounded-full px-2.5 py-1 font-semibold transition ${
+                          genderFilter === option.value
+                            ? 'bg-slate-900 text-slate-50 shadow-sm dark:bg-slate-50 dark:text-slate-900'
+                            : 'text-slate-600 hover:bg-slate-200/80 dark:text-slate-300 dark:hover:bg-slate-800'
                         }`}
                       >
-                        {item}
+                        {option.label}
                       </button>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
-                  {isArabic ? 'نتائج البحث' : 'Results'}
-                </p>
-                <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-                  {isArabic ? `عدد النتائج: ${localizedDoctors.length}` : `Results: ${localizedDoctors.length}`}
+
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-50 dark:bg-slate-50 dark:text-slate-900">
+                    {isArabic ? 'المواعيد المتاحة' : 'Availability'}
+                  </span>
+                  <div className="inline-flex flex-wrap gap-1 text-[11px]">
+                    {[
+                      { value: 'all', label: isArabic ? 'الكل' : 'All' },
+                      { value: 'today', label: isArabic ? 'اليوم' : 'Today' },
+                      { value: 'tomorrow', label: isArabic ? 'غداً' : 'Tomorrow' },
+                      { value: 'this-week', label: isArabic ? 'هذا الأسبوع' : 'This week' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setAvailabilityFilter(option.value)}
+                        className={`rounded-full border px-2.5 py-1 font-semibold transition ${
+                          availabilityFilter === option.value
+                            ? 'border-emerald-300/60 bg-emerald-400/15 text-emerald-900 dark:text-emerald-100'
+                            : 'border-slate-200/80 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {localizedDoctors.length ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {localizedDoctors.map((doctor, index) => (
-                    <DoctorCard key={doctor.id} doctor={doctor} index={index} ui={ui} />
-                  ))}
+              <div className="flex flex-1 flex-wrap items-center gap-2 md:justify-end">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-50 dark:bg-slate-50 dark:text-slate-900">
+                    {isArabic ? 'سعر الكشف' : 'Fee'}
+                  </span>
+                  <div className="inline-flex flex-wrap gap-1 text-[11px]">
+                    {[
+                      { value: 'all', label: isArabic ? 'الكل' : 'All' },
+                      { value: 'lt100', label: isArabic ? 'أقل من 100' : '< 100' },
+                      { value: '100-150', label: isArabic ? '100 - 150' : '100 - 150' },
+                      { value: 'gt150', label: isArabic ? 'أعلى من 150' : '> 150' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setPriceFilter(option.value)}
+                        className={`rounded-full border px-2.5 py-1 font-semibold transition ${
+                          priceFilter === option.value
+                            ? 'border-sky-300/70 bg-sky-400/20 text-sky-900 dark:text-sky-100'
+                            : 'border-slate-200/80 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                  {isArabic ? 'لا توجد نتائج مطابقة للفلترة الحالية.' : 'No results match the current filters.'}
-                </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setSelectedSpecialty('')
+                    setGenderFilter('all')
+                    setAvailabilityFilter('all')
+                    setPriceFilter('all')
+                  }}
+                  className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-slate-950 dark:text-slate-100"
+                >
+                  {isArabic ? 'مسح الفلاتر' : 'Clear filters'}
+                </button>
+              </div>
             </div>
-          </div>
-        ) : null}
+
+            <p className="mb-6 text-center text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
+              {isArabic ? 'اختيار الطبيب المناسب يبدأ بفهم الأعراض بدقة.' : 'Choosing the right doctor starts with clear symptom details.'}
+            </p>
+
+            {loading ? (
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                {t('loadingDoctors')}
+              </div>
+            ) : notice ? (
+              <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-50 p-6 text-sm text-emerald-800 backdrop-blur-2xl dark:bg-emerald-500/10 dark:text-emerald-100">
+                {notice}
+              </div>
+            ) : null}
+
+            {!loading ? (
+              <div className="min-w-0">
+                <div className="order-1 min-w-0 xl:order-2">
+                  <div className="mb-4 grid gap-3 rounded-[1.4rem] border border-slate-200 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-md dark:border-white/10 dark:bg-white/5 sm:grid-cols-[1fr_260px]">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                        {isArabic ? 'أبحث عن دكتور' : 'Search'}
+                      </p>
+                      <input
+                        type="text"
+                        placeholder={isArabic ? 'ابحث بالاسم...' : 'Search by name...'}
+                        value={searchTerm}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                        {isArabic ? 'اختار التخصص' : 'Select specialty'}
+                      </p>
+                      <select
+                        value={selectedSpecialty}
+                        onChange={event => setSelectedSpecialty(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/60 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                      >
+                        <option value="">{isArabic ? 'كل التخصصات' : 'All specialties'}</option>
+                        <optgroup label={isArabic ? 'الأكثر اختيارا' : 'Most selected'}>
+                          {specialtyGroups.popular.map(item => (
+                            <option key={`popular-${item}`} value={item}>{item}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label={isArabic ? 'تخصصات أخرى' : 'Other specialties'}>
+                          {specialtyGroups.other.map(item => (
+                            <option key={`other-${item}`} value={item}>{item}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mb-4 rounded-[1.4rem] border border-slate-200 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                        {isArabic ? 'الأكثر اختيارا' : 'Most selected'}
+                      </p>
+                      {selectedSpecialty ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSpecialty('')}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+                        >
+                          {isArabic ? 'إزالة' : 'Clear'}
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {specialtyGroups.popular.map(item => {
+                        const isActive = selectedSpecialty === item
+                        return (
+                          <button
+                            key={`badge-${item}`}
+                            type="button"
+                            onClick={() => setSelectedSpecialty(item)}
+                            className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                              isActive
+                                ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-800 dark:text-cyan-100'
+                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                            }`}
+                          >
+                            {item}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
+                      {isArabic ? 'نتائج البحث' : 'Results'}
+                    </p>
+                    <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                      {isArabic ? `عدد النتائج: ${localizedDoctors.length}` : `Results: ${localizedDoctors.length}`}
+                    </div>
+                  </div>
+
+                  {localizedDoctors.length ? (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      {localizedDoctors.map((doctor, index) => (
+                        <DoctorCard key={doctor.id} doctor={doctor} index={index} ui={ui} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                      {isArabic ? 'لا توجد نتائج مطابقة للفلترة الحالية.' : 'No results match the current filters.'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
       </section>
     </AppShell>
   )
@@ -2701,9 +2849,7 @@ function useDoctorByCode(secretCode, language) {
       setDoctor(null)
       setLoading(false)
       setNotice('')
-      return () => {
-        active = false
-      }
+      return () => { active = false }
     }
 
     const loadDoctor = async () => {
@@ -2711,11 +2857,11 @@ function useDoctorByCode(secretCode, language) {
       setNotice('')
 
       try {
-        const { data, error } = await supabase
-          .from('doctors')
-          .select('*')
-          .eq('secret_code', normalizedCode)
-          .maybeSingle()
+        const timer = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        const { data, error } = await Promise.race([
+          supabase.from('doctors').select('*').eq('secret_code', normalizedCode).maybeSingle(),
+          timer,
+        ])
 
         if (!active) return
 
@@ -2736,7 +2882,7 @@ function useDoctorByCode(secretCode, language) {
           const fallbackDoctor = createFallbackDoctorByCode(normalizedCode)
           if (fallbackDoctor) {
             setDoctor(localizeDoctor(language, fallbackDoctor))
-            setNotice(`${getText(language, 'supplyNotice')} (${err instanceof Error ? err.message : 'Network error'})`)
+            setNotice(getText(language, 'supplyNotice'))
           } else {
             setDoctor(null)
             setNotice(err instanceof Error ? err.message : getText(language, 'invalidDashboardCode'))
@@ -2744,14 +2890,12 @@ function useDoctorByCode(secretCode, language) {
         }
       }
 
-      setLoading(false)
+      if (active) setLoading(false)
     }
 
     loadDoctor()
 
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [secretCode, language])
 
   return { doctor, loading, notice }
@@ -2766,6 +2910,52 @@ function InfoPanel({ label, value }) {
   )
 }
 
+function VetClinicSimpleView({ doctor, ui }) {
+  const navigate = useNavigate()
+  const isAr = ui.language === 'ar'
+  const team = doctor?.veterinary_team || []
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl rounded-[2rem] border border-emerald-400/25 bg-gradient-to-br from-slate-800/80 via-emerald-900/30 to-slate-800/80 p-8 shadow-[0_0_60px_rgba(16,185,129,0.12)] backdrop-blur-2xl">
+        <div className="text-5xl mb-4">🐾</div>
+        <p className="text-xs uppercase tracking-[0.45em] text-emerald-300 font-semibold">{isAr ? 'عيادة بيطرية' : 'Veterinary Clinic'}</p>
+        <h1 className="mt-3 text-3xl font-bold text-white">{doctor?.name_ar || doctor?.name}</h1>
+        <p className="mt-1 text-emerald-200 font-medium">{doctor?.specialty_ar || doctor?.specialty}</p>
+        <p className="mt-4 text-sm text-slate-100 leading-relaxed">{doctor?.bio_ar || doctor?.bio}</p>
+        {team.length > 0 && (
+          <div className="mt-6 space-y-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-emerald-300 font-semibold">{isAr ? 'الفريق الطبي' : 'Medical Team'}</p>
+            {team.map((vet, i) => (
+              <div key={i} className="flex items-center justify-between rounded-xl border border-emerald-400/20 bg-emerald-900/20 px-4 py-3">
+                <span className="font-semibold text-white">{vet.name_ar}</span>
+                <span className="text-sm font-medium text-emerald-200">{vet.specialty_ar}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-6 space-y-2 text-sm text-slate-200">
+          {doctor?.phone_number && <p><span className="inline-block w-6">📞</span> {doctor.phone_number}</p>}
+          {doctor?.price && <p><span className="inline-block w-6">💰</span> {doctor.price}</p>}
+          {doctor?.working_hours && <p><span className="inline-block w-6">🕐</span> {doctor.working_hours}</p>}
+          {doctor?.working_days && <p><span className="inline-block w-6">📅</span> {doctor.working_days}</p>}
+          {doctor?.payment_method && <p><span className="inline-block w-6">💳</span> {doctor.payment_method}</p>}
+        </div>
+        <div className="mt-6 flex gap-3">
+          {doctor?.clinic_link && (
+            <a href={doctor.clinic_link} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-emerald-400/30 bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:from-emerald-400 hover:to-emerald-500">
+              📍 {isAr ? 'عرض على الخريطة' : 'View on Map'}
+            </a>
+          )}
+          <button onClick={() => navigate('/')} className="rounded-xl border border-slate-500/30 bg-slate-700/50 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-600/50">
+            ← {isAr ? 'العودة للرئيسية' : 'Back to Home'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DoctorProfilePage({ loading, notice, ui }) {
   const queryClient = useQueryClient()
   const t = key => getText(ui.language, key)
@@ -2773,6 +2963,7 @@ function DoctorProfilePage({ loading, notice, ui }) {
   const navigate = useNavigate()
   const { doctor, loading: doctorLoading, notice: doctorNotice } = useDoctorById(doctorId, ui.language)
   const { reviews, loading: reviewsLoading } = useReviewsByDoctorId(doctor?.id, ui.language)
+
   const reviewSummary = useMemo(() => buildReviewSummary(reviews), [reviews])
   const [guestName, setGuestName] = useState('')
   const [guestRating, setGuestRating] = useState(5)
@@ -2856,6 +3047,7 @@ function DoctorProfilePage({ loading, notice, ui }) {
     )
   }
 
+  const isVet = doctor.category === 'veterinary'
   const waitMinutes = doctor.wait_minutes != null && Number.isFinite(Number(doctor.wait_minutes)) ? Number(doctor.wait_minutes) : 24
   const paymentAside =
     ui.language === 'ar'
@@ -2882,19 +3074,29 @@ function DoctorProfilePage({ loading, notice, ui }) {
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/95 via-white/88 to-white dark:from-slate-950/92 dark:via-slate-950/88 dark:to-slate-950" />
           <div className="relative z-10 grid gap-8 p-6 sm:p-8 lg:grid-cols-[auto_1fr] lg:items-center">
-            <div className="mx-auto flex h-40 w-40 shrink-0 overflow-hidden rounded-3xl border-4 border-white shadow-xl ring-2 ring-cyan-400/20 dark:border-slate-800 dark:ring-cyan-400/25 sm:h-44 sm:w-44 lg:h-52 lg:w-52">
+            <div className={`mx-auto flex h-40 w-40 shrink-0 overflow-hidden rounded-3xl border-4 border-white shadow-xl ring-2 sm:h-44 sm:w-44 lg:h-52 lg:w-52 ${
+                isVet ? 'ring-amber-400/25 dark:ring-amber-400/30' : 'ring-cyan-400/20 dark:ring-cyan-400/25'
+              }`}>
               {doctor.image_url ? (
                 <img src={doctor.image_url} alt={doctor.name} className="h-full w-full object-cover" loading="eager" decoding="async" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-400/35 to-emerald-500/30 text-4xl text-white">
-                  ⚕️
+                <div className={`flex h-full w-full items-center justify-center text-4xl text-white ${
+                  isVet
+                    ? 'bg-gradient-to-br from-amber-400/35 to-orange-500/30'
+                    : 'bg-gradient-to-br from-cyan-400/35 to-emerald-500/30'
+                }`}>
+                  🐾
                 </div>
               )}
             </div>
             <div className="min-w-0 text-center lg:text-start rtl:lg:text-right">
-              <p className="text-xs uppercase tracking-[0.45em] text-cyan-700/80 dark:text-cyan-200/80">{t('profileTitle')}</p>
+              <p className={`text-xs uppercase tracking-[0.45em] ${
+                isVet ? 'text-amber-600/90 dark:text-amber-200/90' : 'text-cyan-700/80 dark:text-cyan-200/80'
+              }`}>{isVet ? (ui.language === 'ar' ? 'عيادة بيطرية' : 'Veterinary Clinic') : t('profileTitle')}</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl lg:text-5xl">{doctor.name}</h1>
-              <p className="mt-2 text-lg font-medium text-cyan-700 dark:text-cyan-100/90">{doctor.specialty}</p>
+              <p className={`mt-2 text-lg font-medium ${
+                isVet ? 'text-amber-700 dark:text-amber-100/90' : 'text-cyan-700 dark:text-cyan-100/90'
+              }`}>{doctor.specialty}</p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2 lg:justify-start rtl:lg:justify-end">
                 <span className="rounded-full border border-emerald-300/40 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-100">
                   {t('acceptingAppointments')}
@@ -2938,6 +3140,14 @@ function DoctorProfilePage({ loading, notice, ui }) {
               <InfoPanel label={t('price')} value={doctor.price} />
             </div>
 
+            {isVet && doctor.secret_code ? (
+              <div className="rounded-2xl border-2 border-amber-500/20 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-5 py-4">
+                <p className="text-xs uppercase tracking-[0.3em] font-bold text-amber-300">{ui.language === 'ar' ? 'كود الدخول للوحة التحكم' : 'Dashboard Access Code'}</p>
+                <p className="mt-1 text-2xl font-bold tracking-widest text-white font-mono">{doctor.secret_code}</p>
+                <p className="mt-1 text-xs text-amber-200/70">{ui.language === 'ar' ? 'استخدم هذا الكود لتسجيل الدخول إلى لوحة التحكم' : 'Use this code to log in to the dashboard'}</p>
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap gap-3">
               <a
                 href={clinicMapHref}
@@ -2949,7 +3159,7 @@ function DoctorProfilePage({ loading, notice, ui }) {
               </a>
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(`/dashboard${doctor.secret_code ? `?code=${doctor.secret_code}` : ''}`)}
                 className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
               >
                 {t('dashboard')}
@@ -3312,9 +3522,9 @@ function MedicalCoordinatorPanel({ ui, variant = 'compact' }) {
     setError('')
 
     try {
-      const prompt = buildMedicalCoordinatorJsonPrompt(mergedContext, doctorsSnapshot)
+      const { system: sysPrompt, user: userPrompt } = buildMedicalCoordinatorJsonPrompt(mergedContext, doctorsSnapshot)
 
-      let parsedResult = await fetchMedicalCoordinatorJson(prompt)
+      let parsedResult = await fetchMedicalCoordinatorJson(sysPrompt, userPrompt)
       if (!parsedResult) {
         parsedResult = localTriageResponse(mergedContext, nextTurns, doctorsSnapshot)
       }
@@ -3497,17 +3707,33 @@ function useAppointmentsByDoctorId(doctorId, language) {
   const appointmentsQuery = useQuery({
     queryKey: ['appointments', doctorId, language],
     enabled: Boolean(doctorId),
+    placeholderData: () => {
+      if (!doctorId) return { appointments: [], notice: '' }
+      const local = getLocalAppointmentsForDoctor(doctorId).map((appt, i) => ({
+        ...appt,
+        id: appt.id || `local-${doctorId}-${i}`,
+        status: appt.status || 'Pending',
+        appointment_date: appt.appointment_date || appt.time || new Date().toISOString(),
+        time: appt.time || '09:00',
+      }))
+      local.sort((a, b) => parseAppointmentDate(a).getTime() - parseAppointmentDate(b).getTime())
+      return { appointments: local, notice: '' }
+    },
     queryFn: async () => {
       if (!doctorId) {
         return { appointments: [], notice: '' }
       }
 
       try {
-        const { data, error } = await supabase
-          .from('appointments')
-          .select('id, patient_name, patient_phone, appointment_date, appointment_time, status, doctor_id, symptoms, patient_age, patient_gender')
-          .eq('doctor_id', doctorId)
-          .order('appointment_date', { ascending: true })
+        const timer = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
+        const { data, error } = await Promise.race([
+          supabase
+            .from('appointments')
+            .select('id, patient_name, patient_phone, appointment_date, appointment_time, status, doctor_id, symptoms, patient_age, patient_gender')
+            .eq('doctor_id', doctorId)
+            .order('appointment_date', { ascending: true }),
+          timer,
+        ])
 
         if (!error && Array.isArray(data)) {
           const remoteAppointments = data.map((appointment, index) => {
@@ -3720,6 +3946,8 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   const [symptoms, setSymptoms] = useState('')
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [intakeData, setIntakeData] = useState({ age: '', gender: '', symptoms: '' })
+  const [petType, setPetType] = useState('')
+  const [ownerName, setOwnerName] = useState('')
   const [appointmentDate, setAppointmentDate] = useState(() => {
     if (!slotParam) {
       return toDatetimeLocalValue(new Date())
@@ -3739,10 +3967,13 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
   const doctor = doctorId ? doctorLookup.get(doctorId) : null
   const selectedDoctor = doctor ? localizeDoctor(ui.language, doctor) : (doctorId ? localizeDoctor(ui.language, createFallbackDoctor(doctorId)) : null)
+  const isVet = selectedDoctor?.category === 'veterinary'
 
   const whatsappLink = selectedDoctor?.phone_number
     ? `https://wa.me/${normalizePhoneForWa(selectedDoctor.phone_number)}?text=${encodeURIComponent(
-        `Hello Hihya Care, I just booked an appointment with ${selectedDoctor.name} via the platform.`,
+        isVet
+          ? `Hello Hihya Care, I just booked a vet appointment with ${selectedDoctor.name} via the platform.`
+          : `Hello Hihya Care, I just booked an appointment with ${selectedDoctor.name} via the platform.`,
       )}`
     : ''
 
@@ -3803,15 +4034,20 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
       return
     }
 
-    const trimmedName = patientName.trim()
+    const trimmedName = isVet ? patientName.trim() : patientName.trim()
     const trimmedPhone = phoneNumber.trim()
     const trimmedAppointmentDate = appointmentDate.trim()
+    const trimmedOwner = isVet ? ownerName.trim() : ''
+    const petTypeLabel = isVet && petType ? (petType === 'cat' ? (ui.language === 'ar' ? 'قطة' : 'Cat') : (ui.language === 'ar' ? 'كلب' : 'Dog')) : ''
 
-    if (!trimmedName || !trimmedPhone || !trimmedAppointmentDate) {
+    const nameForDisplay = isVet && trimmedOwner ? trimmedOwner : trimmedName
+    const nameRequired = isVet ? (!trimmedName || !trimmedPhone || !trimmedAppointmentDate) : (!trimmedName || !trimmedPhone || !trimmedAppointmentDate)
+
+    if (nameRequired) {
       setStatus('error')
       setFeedback(
         ui.language === 'ar'
-          ? 'يرجى إدخال اسم المريض ورقم الهاتف وتاريخ الموعد.'
+          ? (isVet ? 'يرجى إدخال اسم الحيوان ورقم الهاتف وتاريخ الموعد.' : 'يرجى إدخال اسم المريض ورقم الهاتف وتاريخ الموعد.')
           : 'Please enter the patient name, phone number, and appointment date.',
       )
       return
@@ -3832,7 +4068,13 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
     const appointmentTime = appointmentIso ? appointmentIso.slice(11, 16) : null
     const attachmentNames = uploadedFiles.map(f => f.name)
     const attachments = await filesToAttachments(uploadedFiles)
-    const localAppointment = createLocalAppointment(doctorId, trimmedName, trimmedPhone, appointmentIso, trimmedSymptoms)
+    const patientNameForDb = isVet && trimmedOwner ? trimmedOwner : trimmedName
+    const localAppointment = createLocalAppointment(doctorId, patientNameForDb, trimmedPhone, appointmentIso, trimmedSymptoms)
+    if (isVet) {
+      localAppointment.pet_name = trimmedName
+      localAppointment.pet_type = petTypeLabel
+      localAppointment.owner_name = trimmedOwner
+    }
     localAppointment.attachments = attachments
     localAppointment.patient_age = intakeData.age
     localAppointment.patient_gender = intakeData.gender
@@ -3857,8 +4099,12 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
       if (attachments.length) {
         symptomsParts.push('__FILES__' + attachments.map(a => encodeURIComponent(JSON.stringify({ name: a.name, data: a.data, size: a.size }))).join('||'))
       }
+      if (isVet) {
+        const petInfo = [petTypeLabel && `النوع: ${petTypeLabel}`, trimmedName && `الحيوان: ${trimmedName}`, trimmedOwner && `صاحب الحيوان: ${trimmedOwner}`].filter(Boolean).join(' | ')
+        symptomsParts.unshift(petInfo)
+      }
       const supabasePayload = {
-        patient_name: trimmedName,
+        patient_name: patientNameForDb,
         patient_phone: trimmedPhone,
         doctor_id: doctorId,
         patient_id: session?.user?.id ?? null,
@@ -3866,6 +4112,11 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         appointment_time: appointmentTime,
         status: 'Pending',
         symptoms: symptomsParts.filter(Boolean).join('\n') || null,
+      }
+      if (isVet) {
+        supabasePayload.pet_name = trimmedName
+        supabasePayload.pet_type = petTypeLabel
+        if (trimmedOwner) supabasePayload.owner_name = trimmedOwner
       }
       // If columns exist in Supabase, include them
       if (intakeData.age) supabasePayload.patient_age = intakeData.age
@@ -3911,7 +4162,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
     navigate('/booking-success', {
       state: {
-        patientName: trimmedName,
+        patientName: patientNameForDb,
         patientPhone: trimmedPhone,
         appointmentIso,
         doctorId,
@@ -3921,6 +4172,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         clinicPhone: selectedDoctor.phone_number || '',
         mapsUrl: selectedDoctor.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
         bookingRef: `HC-${Date.now().toString(36).toUpperCase()}`,
+        ...(isVet ? { petName: trimmedName, petType: petTypeLabel } : {}),
       },
     })
   }
@@ -4002,20 +4254,67 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
             </div>
 
             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('bookingPatientName')}</span>
-                <div className="group rounded-2xl border border-cyan-300/15 bg-white px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70">
-                  <input
-                    className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
-                    value={patientName}
-                    onChange={event => setPatientName(event.target.value)}
-                    placeholder={t('bookingPlaceholderName')}
-                    autoComplete="name"
-                    spellCheck={false}
-                    disabled={isLoading}
-                  />
-                </div>
-              </label>
+              {isVet ? (
+                <>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-amber-600 dark:text-amber-300">{ui.language === 'ar' ? 'نوع الحيوان' : 'Pet Type'}</span>
+                    <div className="group rounded-2xl border border-amber-300/20 bg-white px-4 py-3 dark:bg-slate-950/70">
+                      <select
+                        value={petType}
+                        onChange={event => setPetType(event.target.value)}
+                        className="w-full bg-transparent text-base text-slate-900 outline-none dark:text-white"
+                        disabled={isLoading}
+                      >
+                        <option value="">{ui.language === 'ar' ? '— اختر النوع —' : '— Select type —'}</option>
+                        <option value="cat">{ui.language === 'ar' ? 'قطة' : 'Cat'}</option>
+                        <option value="dog">{ui.language === 'ar' ? 'كلب' : 'Dog'}</option>
+                      </select>
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-amber-600 dark:text-amber-300">{ui.language === 'ar' ? 'اسم الحيوان الأليف' : 'Pet Name'}</span>
+                    <div className="group rounded-2xl border border-amber-300/20 bg-white px-4 py-3 transition-all duration-300 focus-within:border-amber-300/60 focus-within:shadow-[0_0_0_1px_rgba(251,191,36,0.2),0_0_35px_rgba(251,191,36,0.16)] dark:bg-slate-950/70">
+                      <input
+                        className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                        value={patientName}
+                        onChange={event => setPatientName(event.target.value)}
+                        placeholder={ui.language === 'ar' ? 'اسم القطة أو الكلب...' : 'Pet name...'}
+                        spellCheck={false}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-amber-600 dark:text-amber-300">{ui.language === 'ar' ? 'اسم صاحب الحيوان' : 'Owner Name'}</span>
+                    <div className="group rounded-2xl border border-amber-300/20 bg-white px-4 py-3 transition-all duration-300 focus-within:border-amber-300/60 focus-within:shadow-[0_0_0_1px_rgba(251,191,36,0.2),0_0_35px_rgba(251,191,36,0.16)] dark:bg-slate-950/70">
+                      <input
+                        className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                        value={ownerName}
+                        onChange={event => setOwnerName(event.target.value)}
+                        placeholder={ui.language === 'ar' ? 'اسم صاحب الحيوان...' : 'Owner name...'}
+                        autoComplete="name"
+                        spellCheck={false}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </label>
+                </>
+              ) : (
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('bookingPatientName')}</span>
+                  <div className="group rounded-2xl border border-cyan-300/15 bg-white px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70">
+                    <input
+                      className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                      value={patientName}
+                      onChange={event => setPatientName(event.target.value)}
+                      placeholder={t('bookingPlaceholderName')}
+                      autoComplete="name"
+                      spellCheck={false}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </label>
+              )}
 
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('bookingPhone')}</span>
@@ -4033,13 +4332,17 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{ui.language === 'ar' ? 'الأعراض (اختياري)' : 'Symptoms (optional)'}</span>
-                <div className="group rounded-2xl border border-cyan-300/15 bg-white px-4 py-3 transition-all duration-300 focus-within:border-cyan-300/60 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70">
+                <span className={`mb-2 block text-sm font-medium ${isVet ? 'text-amber-600 dark:text-amber-300' : 'text-slate-700 dark:text-slate-200'}`}>{ui.language === 'ar' ? 'الأعراض (اختياري)' : 'Symptoms (optional)'}</span>
+                <div className={`group rounded-2xl border px-4 py-3 transition-all duration-300 focus-within:shadow-[0_0_0_1px_rgba(103,232,249,0.2),0_0_35px_rgba(34,211,238,0.16)] dark:bg-slate-950/70 ${
+                  isVet
+                    ? 'border-amber-300/20 focus-within:border-amber-300/60 bg-white'
+                    : 'border-cyan-300/15 focus-within:border-cyan-300/60 bg-white'
+                }`}>
                   <textarea
                     className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 resize-none"
                     value={symptoms}
                     onChange={event => setSymptoms(event.target.value)}
-                    placeholder={ui.language === 'ar' ? 'صِف الأعراض التي تشعر بها...' : 'Describe your symptoms...'}
+                    placeholder={isVet ? (ui.language === 'ar' ? 'صف أعراض الحيوان...' : 'Describe the pet symptoms...') : (ui.language === 'ar' ? 'صِف الأعراض التي تشعر بها...' : 'Describe your symptoms...')}
                     rows={2}
                     disabled={isLoading}
                   />
@@ -4076,7 +4379,11 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-5 py-4 text-sm font-semibold text-slate-950 shadow-[0_10px_40px_rgba(34,211,238,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_60px_rgba(34,211,238,0.36)] focus:outline-none focus:ring-2 focus:ring-cyan-200/70 focus:ring-offset-2 focus:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 dark:focus:ring-offset-slate-950"
+                className={`group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border px-5 py-4 text-sm font-semibold shadow-[0_10px_40px_rgba(34,211,238,0.28)] transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 dark:focus:ring-offset-slate-950 ${
+                  isVet
+                    ? 'border-amber-400/30 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-amber-500/20 hover:shadow-[0_16px_60px_rgba(251,191,36,0.36)] focus:ring-amber-200/70'
+                    : 'border-cyan-300/25 bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 text-slate-950 hover:shadow-[0_16px_60px_rgba(34,211,238,0.36)] focus:ring-cyan-200/70'
+                }`}
               >
                 <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.45),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 {isLoading ? (
@@ -4480,9 +4787,10 @@ function DashboardAccessPage({ ui }) {
   const [showLogin, setShowLogin] = useState(false)
   const { doctor: authDoctor, loading: authDoctorLoading } = useDoctorByUserId(session?.user?.id, ui.language)
   const { doctor, loading: doctorLoading, notice: doctorNotice } = useDoctorByCode(submittedCode, ui.language)
-  const { appointments, setAppointments, loading: appointmentsLoading, notice: appointmentsNotice } = useAppointmentsByDoctorId(doctor?.id || authDoctor?.id, ui.language)
+  const { appointments, setAppointments, loading: appointmentsLoading, notice: appointmentsNotice } = useAppointmentsByDoctorId(doctor?.id, ui.language)
 
-  const resolvedDoctor = authDoctor || doctor
+  // Use ONLY the code-submitted doctor — never auto-enter from auth session
+  const resolvedDoctor = doctor
   const resolvedAppointments = appointments || []
   const dataReady = resolvedDoctor && !appointmentsLoading
 
@@ -4500,18 +4808,13 @@ function DashboardAccessPage({ ui }) {
     return () => { active = false; subscription?.unsubscribe() }
   }, [])
 
-  // Prefill from URL
+  // Prefill input from URL (never auto-submit)
   useEffect(() => {
     try {
       if (typeof window === 'undefined') return
       const params = new URLSearchParams(window.location.search)
       const codeParam = params.get('code') || params.get('secret_code')
-      const doctorParam = params.get('doctor') || params.get('doctorId')
-      if (codeParam) { setSecretCode(codeParam); setSubmittedCode(String(codeParam).trim()) }
-      else if (doctorParam) {
-        const fb = createFallbackDoctor(doctorParam)
-        if (fb?.secret_code) { setSecretCode(fb.secret_code); setSubmittedCode(String(fb.secret_code).trim()) }
-      }
+      if (codeParam) { setSecretCode(String(codeParam).trim()) }
     } catch (e) { /* ignore */ }
   }, [])
 
@@ -4553,8 +4856,8 @@ function DashboardAccessPage({ ui }) {
     }
   }
 
-  // No doctor yet — show full-screen code entry
-  if (!resolvedDoctor) {
+  // Always require a submitted code — never auto-enter without explicit code entry
+  if (!submittedCode || !resolvedDoctor) {
     return (
       <AppShell ui={ui}>
         <div className="flex min-h-[85vh] items-center justify-center p-4">
@@ -4726,6 +5029,7 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointme
     try { saved = doctor?.id ? window.localStorage.getItem(`hihya-clinic-status-${doctor.id}`) : null } catch (e) { /* ignore */ }
     if (saved) setClinicStatus(saved)
   }, [doctor?.id])
+  const [prescriptionModal, setPrescriptionModal] = useState({ open: false, appointment: null })
   const [delayModal, setDelayModal] = useState({ open: false, appointment: null, doctorName: '' })
   const [toast, setToast] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
@@ -5111,6 +5415,10 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointme
                               className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
                               <Clock className="h-3.5 w-3.5" />
                             </button>
+                            <button type="button" onClick={() => setPrescriptionModal({ open: true, appointment: appt })}
+                              className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-200">
+                              <FileText className="h-3 w-3 inline" /> روشتة
+                            </button>
                             <button type="button" onClick={() => setEhrPatient(isEhrOpen ? null : appt)}
                               className={`rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition ${isEhrOpen ? 'border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-400/20 dark:bg-violet-500/20 dark:text-violet-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400'}`}>
                               ملف
@@ -5328,6 +5636,153 @@ function DoctorDashboardPage({ doctor, doctorLoading, appointments, setAppointme
           </div>
         </div>
       ) : null}
+
+      {/* Prescription Modal */}
+      {prescriptionModal.open && doctor && (
+        <PrescriptionModal
+          doctor={doctor}
+          appointment={prescriptionModal.appointment}
+          onClose={() => setPrescriptionModal({ open: false, appointment: null })}
+        />
+      )}
+    </div>
+  )
+}
+
+function PrescriptionPublicView() {
+  const { id } = useParams()
+  const [prescription, setPrescription] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!id) return
+    let active = true
+    const load = async () => {
+      const { data, error: err } = await supabase
+        .from('prescriptions')
+        .select('*')
+        .eq('qr_uuid', id)
+        .maybeSingle()
+      if (!active) return
+      if (err || !data) {
+        setError('لم يتم العثور على الروشتة')
+      } else {
+        setPrescription(data)
+      }
+      setLoading(false)
+    }
+    load()
+    return () => { active = false }
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#020617]">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
+      </div>
+    )
+  }
+
+  if (error || !prescription) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4 dark:bg-[#020617]">
+        <div className="max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-white/5">
+          <XCircle className="mx-auto h-12 w-12 text-rose-400" />
+          <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">الروشتة غير موجودة</h2>
+          <p className="mt-2 text-sm text-slate-500">تأكد من رابط الروشتة أو تواصل مع العيادة.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const meds = Array.isArray(prescription.medicines) ? prescription.medicines : []
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 py-8 px-4 dark:from-[#020617] dark:to-[#0f1f3d]" dir="rtl">
+      <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-slate-900 dark:shadow-cyan-900/20">
+        {/* Header */}
+        <div className="bg-gradient-to-l from-[#0a1628] via-[#0f1f3d] to-[#1a2d52] px-8 py-10 text-center">
+          <p className="text-xs font-bold tracking-[0.35em] text-amber-400/80">HIHYA CARE</p>
+          <h1 className="mt-3 text-3xl font-bold text-white" style={{ fontFamily: "'Amiri', 'Noto Naskh Arabic', serif" }}>
+            روشتة علاج
+          </h1>
+          <p className="mt-2 text-sm text-blue-200/70">روشتة إلكترونية معتمدة</p>
+        </div>
+
+        <div className="p-8 space-y-5">
+          {/* Doctor Info */}
+          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-5 dark:border-blue-400/20 dark:from-blue-500/10 dark:to-transparent">
+            <p className="text-xs font-semibold text-blue-500/70 tracking-wider">الطبيب المعالج</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Amiri', 'Noto Naskh Arabic', serif" }}>
+              {prescription.signature_text}
+            </p>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">رقم الروشتة: <span className="font-mono font-bold text-blue-600 dark:text-blue-300" dir="ltr">{prescription.qr_uuid?.slice(0, 8) || '—'}</span></p>
+          </div>
+
+          {/* Patient + Date */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-xs font-semibold text-slate-500/70">المريض</p>
+              <p className="mt-1.5 text-base font-bold text-slate-900 dark:text-white">{prescription.patient_name || '—'}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-xs font-semibold text-slate-500/70">التاريخ</p>
+              <p className="mt-1.5 text-base font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Amiri', serif" }}>
+                {prescription.created_at ? new Date(prescription.created_at).toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Diagnosis */}
+          {prescription.diagnosis && (
+            <div className="rounded-xl border-r-4 border-amber-400 bg-amber-50 p-4 dark:bg-amber-500/10 dark:border-amber-400">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">التشخيص</p>
+              <p className="mt-2 text-base font-semibold text-slate-900 dark:text-white">{prescription.diagnosis}</p>
+            </div>
+          )}
+
+          {/* Medicines */}
+          {meds.length > 0 && (
+            <div>
+              <p className="mb-3 text-xs font-semibold text-slate-500 dark:text-slate-400">💊 الأدوية الموصوفة</p>
+              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:border-white/10 dark:divide-white/5">
+                {meds.map((med, i) => (
+                  <div key={i} className="flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{med.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
+                        {med.dosage && <span>💊 الجرعة: {med.dosage}</span>}
+                        {med.duration && <span>⏱ المدة: {med.duration}</span>}
+                        {med.notes && <span>📝 {med.notes}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {prescription.notes && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+              <p className="text-xs font-semibold text-slate-500/70">ملاحظات إضافية</p>
+              <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{prescription.notes}</p>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="border-t border-slate-200 pt-5 text-center dark:border-white/10">
+            <p className="text-xs text-slate-400" style={{ fontFamily: "'Amiri', serif" }}>
+              روشتة إلكترونية صادرة من Hihya Care
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">
+              للتحقق من صحة الروشتة، تواصل مع العيادة مباشرة
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

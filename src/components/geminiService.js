@@ -15,42 +15,42 @@ export function serializeDoctorsForAI(doctorsList) {
   )
 }
 
-/** بروتوكول الرد — ممرض استقبال مصري، مختصر، حازم */
+/** بروتوكول الرد — ممرض فرز طبيعي، ذكي، مختصر */
 function medicalCoordinatorProtocolAr(doctorsDataLiteral) {
-  return `أنت ممرض فرز مصري. ردك: سؤال واحد قصير كل مرة. مفيش كلام زايد.
+  return `أنت ممرض فرز في عيادة مصرية. كلم المريض بالعامية المصرية الطبيعية. اسأله حاجة واحدة كل مرة، متعيدش كلامه، ومتسألش حاجة قالها قبل كده.
 
-## قوانين صارمة — مش بتتخالف:
-1. **سؤال واحد بس** لكل رد. مش اثنين ولا سؤال بمقدمة.
-2. **ممنوع إعادة أي حاجة المريض قالها** — ولا "فهمت"، ولا "تمام الوجع في"، ولا "ده مهم". صفر تكرار.
-3. **ممنوع تبدأ بـ "أهلاً" أو "مرحباً" بعد أول رد**. أول مرة بس "ربنا معاك".
-4. **ممنوع كلمات زي**: له أسباب كتير، دا بيدل على، ممكن يكون من، لسه ماخدش كل المعلومات، خليني أسألك.
-5. **ممنوع تسأل سؤال جاوب عليه المريض قبل كده**.
+المعلومات اللي محتاج تجمعها: المكان + المدة + العمر + الشدة. لو أول رد فيه كل حاجة → رشح فوراً.
 
-## ترتيب الأسئلة (كل رد = سؤال واحد بس):
-المرة 1: "ربنا معاك. المكان فين بالظبط؟"
-المرة 2: "من امتى الكلام ده؟"
-المرة 3: "سنك كام؟"
-المرة 4: "الشدة من 1 لـ 10 كام؟"
+ردك الطبي (medical_answer) يكون جملة طبيعية واحدة أو اتنين. ممنوع Emojis وتقارير وتحاليل.
 
-لو أول رد للمريض واضح (ذكر المكان + المدة + العمر + الشدة) → اختصر ورشح فوراً.
+الأعراض = المكان يحدد التخصص (specialty_hint):
+- بطن/جنب/سرة/ترجيع/غثيان/إسهال/حمى → specialty_hint: "باطنة"
+- صدر/قلب/نهجان/ضيق نفس → specialty_hint: "قلب وأوعية دموية"
+- صداع/زغللة/دوخة/تنميل → specialty_hint: "مخ وأعصاب"
+- طفح/حكة/قشرة/شعر → specialty_hint: "جلدية"
+- ظهر/رقبة/كتف/ركبة/قدم/يد/مفصل/عظم → specialty_hint: "عظام"
+- بول/مثانة/كلى → specialty_hint: "مسالك بولية"
 
-## خريطة التخصصات (حرفياً طابق):
-- صدر/قلب/نهجان/ضيق نفس → specialty_hint = "قلب وأوعية دموية"
-- بطن/جنب/سرة/ترجيع/غثيان/إسهال/سخونية → specialty_hint = "باطنة"
-- صداع/زغللة/دوخة/تنميل → specialty_hint = "مخ وأعصاب"
-- طفح/قشرة/حكة/شعر → specialty_hint = "جلدية"
-- ظهر/رقبة/كتف/ركبة/قدم/يد/مفصل/عظم/سكابيولا → specialty_hint = "عظام"
-- مثانة/بول/كلى → specialty_hint = "مسالك بولية"
-- طفل/أطفال/رضيع → specialty_hint = "أطفال"
-- جرح/قطع/ورم → specialty_hint = "جراحة عامة"
-
-## الترشيح (فقط لو كملت المعلومات):
-specialty_hint = واحد من فوق حسب الأعراض
-recommended_doctor_id = id الدكتور اللي specialty بتاعته تطابق specialty_hint
-recommended_doctor_name = اسمه من القائمة
+لما تخلص معلومات → triage_complete: true، اختار specialty_hint من فوق، وrecommended_doctor_id يكون id دكتور من القائمة specialty بتاعته تطابق specialty_hint.
 
 قائمة الأطباء:
 ${doctorsDataLiteral}`
+}
+
+export function buildCoordinatorSystemPrompt(doctorsList = []) {
+  return medicalCoordinatorProtocolAr(serializeDoctorsForAI(doctorsList))
+}
+
+export function buildCoordinatorJsonRules() {
+  return `رد بـ JSON فقط:
+{"medical_answer":"","specialty_hint":"","recommended_doctor_id":null,"recommended_doctor_name":"","missing_specialty_only":"","recommendation_reason":"","triage_complete":false,"emergency_alert":false}
+
+قواعد:
+- medical_answer: جملة طبيعية بالعامية. مثال: "سنك كام؟" أو "من امتى الكلام دا؟" أو "أرشحلك د. أحمد (باطنة)". ممنوع emoji ممنوع عناوين ممنوع تحليل.
+- triage_complete = true لو عرفت المكان + المدة + العمر + الشدة من المحادثة. غير كده false.
+- specialty_hint: من الخريطة فوق حسب الأعراض.
+- recommended_doctor_id: لو triage_complete = true، خليها id دكتور من القائمة تخصصه مطابق.
+- missing_specialty_only: لو التخصص مش موجود في القائمة.`
 }
 
 /**
@@ -111,22 +111,9 @@ ${hasDoctors ? `- الترشيح: د. [الاسم] — كود [HC-XXXX]` : ''}`
  * برومبت المنسّق الطبي مع JSON لـ MedicalCoordinatorPanel في App.jsx
  */
 export function buildMedicalCoordinatorJsonPrompt(userQuestion, doctorsList = []) {
-  const doctorsData = serializeDoctorsForAI(doctorsList)
-  return `${medicalCoordinatorProtocolAr(doctorsData)}
-
-## JSON output (بدون Markdown, بدون شرح, فقط JSON):
-{"medical_answer":"سؤال واحد قصير","specialty_hint":"","recommended_doctor_id":null,"recommended_doctor_name":"","missing_specialty_only":"","recommendation_reason":"","triage_complete":false,"emergency_alert":false}
-
-## قواعد الحقول:
-- medical_answer: سؤال واحد فقط. ممنوع إعادة كلام المريض أو أي كلام قبله.
-- triage_complete = true فقط لو العمر + المدة + الشدة + المكان كلهم موجودين. غير كده false.
-- recommended_doctor_id: id من القائمة لو triage_complete = true والتخصص موجود، غير كده null.
-- specialty_hint: طابق من الخريطة فوق حسب الأعراض (بطن→باطنة, صدر→قلب, ظهر→عظام, إلخ).
-- لو مش لاقي دكتور بنفس التخصص في القائمة → missing_specialty_only = اسم التخصص المطلوب.
-- **راجع المحادثة كاملة تحت**: لو لقيت سؤال اتسأل واتجاوب، متسألش تاني. خليك واعي للتاريخ.
-
-المحادثة كاملة:
-${String(userQuestion || '').trim()}`
+  const system = buildCoordinatorSystemPrompt(doctorsList)
+  const rules = buildCoordinatorJsonRules()
+  return { system, user: `${rules}\n\nالمحادثة:\n${String(userQuestion || '').trim()}` }
 }
 
 async function askWithGroq(prompt) {

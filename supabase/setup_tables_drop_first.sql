@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS doctors (
   next_available_slot TIMESTAMPTZ,
   rating NUMERIC,
   reviews_count INTEGER,
+  category TEXT DEFAULT 'human',
+  veterinary_team JSONB,
+  working_days TEXT,
+  working_hours TEXT,
+  facebook_url TEXT,
+  rescue_discount TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -59,6 +65,46 @@ ON CONFLICT (id) DO UPDATE SET
   specialty = EXCLUDED.specialty, specialty_en = EXCLUDED.specialty_en, specialty_ar = EXCLUDED.specialty_ar,
   specialties = EXCLUDED.specialties, bio = EXCLUDED.bio, bio_en = EXCLUDED.bio_en, bio_ar = EXCLUDED.bio_ar,
   price = EXCLUDED.price, price_value = EXCLUDED.price_value, secret_code = EXCLUDED.secret_code;
+
+-- Veterinary clinic seed
+INSERT INTO doctors (id, name, name_en, name_ar, specialty, specialty_en, specialty_ar, specialties, availability, bio, bio_en, bio_ar, price, price_value, clinicLocation, clinicLocation_en, clinicLocation_ar, clinic_link, phone_number, category, veterinary_team, working_days, working_hours, payment_method, rescue_discount, facebook_url)
+VALUES (
+  'al-rahma-pet-clinic',
+  'Al Rahma Pet Clinic',
+  'Al Rahma Pet Clinic',
+  'عيادة الرحمة البيطرية',
+  'Pet Medicine & Surgery (Cats & Dogs)',
+  'Pet Medicine & Surgery (Cats & Dogs)',
+  'طب وجراحة الحيوانات الأليفة (قطط وكلاب)',
+  ARRAY['بيطري', 'قطط', 'كلاب', 'جراحة', 'باطنة'],
+  ARRAY['all-week'],
+  'العیادة الوحيدة في ههيا المتخصصة في علاج الحيوانات الأليفة فقط (قطط وكلاب). متاح بها 2 أطباء تخصص جراحة وباطنة (مبنشتغلش في المواشي ولا الطيور ولا الأسماك).',
+  'The only clinic in Hehya specialized in pet medicine (cats & dogs). Two doctors: surgery & internal medicine.',
+  'العیادة الوحيدة في ههيا المتخصصة في علاج الحيوانات الأليفة فقط (قطط وكلاب). متاح بها 2 أطباء تخصص جراحة وباطنة (مبنشتغلش في المواشي ولا الطيور ولا الأسماك).',
+  'الكشف 80 ج - التطعیمات حسب النوع',
+  80,
+  'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
+  'Madafet El-Markaz St, behind the registry, second left',
+  'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
+  'https://maps.google.com/maps?q=30.6733874%2C31.5864982&z=17&hl=en',
+  '01028423304',
+  'veterinary',
+  '[{"name": "Mahmoud Rasmy", "name_ar": "محمود رسمي", "specialty": "Surgery", "specialty_ar": "جراحة"}, {"name": "Abdulrahman El-Gammal", "name_ar": "عبدالرحمن الجمال", "specialty": "Internal Medicine", "specialty_ar": "باطنة"}]',
+  'جميع أيام الأسبوع حتی الجمعة (الجمعة غير ثابتة)',
+  'من 2 ظهراً إلى 11 مساءً',
+  'كاش - فودافون كاش',
+  'خصم 50 ج على الكشف والعلاج لحالات الإنقاذ',
+  'https://www.facebook.com/share/18gX5Uh1r2/?mibextid=wwXIfr'
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name, name_en = EXCLUDED.name_en, name_ar = EXCLUDED.name_ar,
+  specialty = EXCLUDED.specialty, specialty_en = EXCLUDED.specialty_en, specialty_ar = EXCLUDED.specialty_ar,
+  specialties = EXCLUDED.specialties, bio = EXCLUDED.bio, bio_en = EXCLUDED.bio_en, bio_ar = EXCLUDED.bio_ar,
+  price = EXCLUDED.price, price_value = EXCLUDED.price_value,
+  category = EXCLUDED.category, veterinary_team = EXCLUDED.veterinary_team,
+  working_days = EXCLUDED.working_days, working_hours = EXCLUDED.working_hours,
+  payment_method = EXCLUDED.payment_method, rescue_discount = EXCLUDED.rescue_discount,
+  facebook_url = EXCLUDED.facebook_url;
 
 -- 2. APPOINTMENTS TABLE
 CREATE TABLE IF NOT EXISTS appointments (
@@ -123,6 +169,23 @@ CREATE TABLE IF NOT EXISTS reviews (
   patient_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   patient_name TEXT
 );
+
+-- 6. PRESCRIPTIONS TABLE
+CREATE TABLE IF NOT EXISTS prescriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  doctor_id TEXT REFERENCES doctors(id) ON DELETE CASCADE,
+  patient_name TEXT NOT NULL,
+  patient_phone TEXT,
+  diagnosis TEXT,
+  medicines JSONB DEFAULT '[]',
+  notes TEXT,
+  signature_text TEXT,
+  qr_uuid TEXT UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_prescriptions_doctor_id ON prescriptions(doctor_id);
+CREATE INDEX IF NOT EXISTS idx_prescriptions_qr_uuid ON prescriptions(qr_uuid);
 
 -- =============================================
 -- Apply RLS Policies

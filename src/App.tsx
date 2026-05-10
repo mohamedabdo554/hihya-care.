@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
   BrowserRouter,
-  Link,
   Navigate,
   Route,
   Routes,
@@ -19,6 +18,8 @@ import ProtectedLayout from './components/ProtectedLayout'
 import { DoctorDashboard } from './components/dashboard/DoctorDashboard'
 import AITriageChat from './components/ai/AITriageChat'
 import { TriageProvider } from './context/TriageContext'
+import VeterinaryCard from './components/VeterinaryCard'
+import VeterinaryProfilePage from './components/VeterinaryProfilePage.jsx'
 
 // Lazy load heavy components
 const PremiumDoctorProfile = lazy(() => import('./components/PremiumDoctorProfile'))
@@ -33,6 +34,7 @@ const fallbackDoctors: Doctor[] = [
     price: '$90 consultation',
     experience: '14 years in advanced cardiac care',
     clinicLocation: 'Hihya Central Heart Clinic, Level 3',
+    category: 'human',
   },
   {
     id: 'dr-adam-fahmy',
@@ -43,6 +45,7 @@ const fallbackDoctors: Doctor[] = [
     price: '$110 consultation',
     experience: '11 years in neuro diagnostics',
     clinicLocation: 'Neuro Motion Wing, Suite 12',
+    category: 'human',
   },
   {
     id: 'dr-sara-adel',
@@ -53,6 +56,29 @@ const fallbackDoctors: Doctor[] = [
     price: '$75 consultation',
     experience: '9 years in child wellness',
     clinicLocation: 'Sunrise Pediatrics, Floor 2',
+    category: 'human',
+  },
+  {
+    id: 'al-rahma-pet-clinic',
+    name: 'Al Rahma Pet Clinic',
+    specialty: 'Pet Medicine & Surgery',
+    image_url: null,
+    bio: 'العیادة الوحيدة في ههيا المتخصصة في علاج الحيوانات الأليفة فقط (قطط وكلاب) - متاح بها 2 أطباء تخصص جراحة وباطنة',
+    price: 'الكشف 80 ج - حالات الإنقاذ خصم 50 ج',
+    experience: '',
+    clinicLocation: 'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
+    category: 'veterinary',
+    veterinaryTeam: [
+      { name: 'Mahmoud Rasmy', name_ar: 'محمود رسمي', specialty: 'Surgery', specialty_ar: 'جراحة' },
+      { name: 'Abdulrahman El-Gammal', name_ar: 'عبدالرحمن الجمال', specialty: 'Internal Medicine', specialty_ar: 'باطنة' },
+    ],
+    phone_number: '01028423304',
+    clinic_link: 'https://maps.google.com/maps?q=30.6733874%2C31.5864982&z=17&hl=en',
+    facebook_url: 'https://www.facebook.com/share/18gX5Uh1r2/?mibextid=wwXIfr',
+    working_days: 'جميع أيام الأسبوع حتی الجمعة (الجمعة غير ثابتة)',
+    working_hours: 'من 2 ظهراً إلى 11 مساءً',
+    payment_method: 'كاش - فودافون كاش',
+    rescue_discount: 'خصم 50 ج على الكشف والعلاج لحالات الإنقاذ',
   },
 ]
 
@@ -63,6 +89,18 @@ type DoctorRow = {
   image_url: string | null
   price: string | number | null
   bio: string | null
+  category?: string
+  veterinary_team?: any
+  clinicLocation?: string
+  clinicLocation_en?: string
+  clinicLocation_ar?: string
+  phone_number?: string
+  clinic_link?: string
+  facebook_url?: string
+  working_days?: string
+  working_hours?: string
+  payment_method?: string
+  rescue_discount?: string
 }
 
 function App() {
@@ -79,7 +117,7 @@ function App() {
 
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialty, image_url, price, bio')
+        .select('id, name, specialty, image_url, price, bio, category, veterinary_team, phone_number, clinic_link, facebook_url, working_days, working_hours, payment_method, rescue_discount')
         .order('name', { ascending: true })
 
       if (!isMounted) {
@@ -94,16 +132,38 @@ function App() {
       } else {
         const nextDoctors = ((data ?? []) as DoctorRow[]).map((doctor) => {
           const specialtyKey = doctor.specialty.toLowerCase()
+          const isVet = doctor.category === 'veterinary'
 
-          return {
+          const base = {
             id: String(doctor.id),
             name: doctor.name,
             specialty: doctor.specialty,
             image_url: doctor.image_url,
             price: doctor.price ? String(doctor.price) : 'Consultation on request',
             bio: doctor.bio,
-            experience: doctor.bio || `Seasoned ${doctor.specialty.toLowerCase()} specialist`,
-            clinicLocation: `Hihya Care ${specialtyKey} wing`,
+            category: (doctor.category ?? 'human') as 'human' | 'veterinary',
+          }
+
+          if (isVet) {
+            return {
+              ...base,
+              experience: '',
+              clinicLocation: doctor.clinicLocation ?? doctor.clinic_link ?? '',
+              veterinaryTeam: doctor.veterinary_team ?? [],
+              phone_number: doctor.phone_number,
+              clinic_link: doctor.clinic_link,
+              facebook_url: doctor.facebook_url,
+              working_days: doctor.working_days,
+              working_hours: doctor.working_hours,
+              payment_method: doctor.payment_method,
+              rescue_discount: doctor.rescue_discount,
+            }
+          }
+
+          return {
+            ...base,
+            experience: doctor.bio || `Seasoned ${specialtyKey} specialist`,
+            clinicLocation: doctor.clinicLocation ?? `Hihya Care ${specialtyKey} wing`,
           }
         })
 
@@ -149,6 +209,10 @@ function App() {
           <Route
             path="/book/:doctorId"
             element={<BookingPage doctors={doctorLookup} loading={doctorsLoading} notice={doctorsNotice} />}
+          />
+          <Route
+            path="/veterinary/:clinicId"
+            element={<VeterinaryPage doctors={doctorLookup} loading={doctorsLoading} notice={doctorsNotice} />}
           />
           <Route
             path="/dashboard"
@@ -203,6 +267,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
   )
 }
 
+const tabs = [
+  { key: 'human', label: 'بشري', labelEn: 'Human Medicine' },
+  { key: 'veterinary', label: 'بيطري', labelEn: 'Veterinary' },
+]
+
 function HomePage({
   doctors,
   loading,
@@ -212,6 +281,11 @@ function HomePage({
   loading: boolean
   notice: string
 }) {
+  const [activeTab, setActiveTab] = useState<'human' | 'veterinary'>('human')
+
+  const humanDoctors = doctors.filter((d) => d.category !== 'veterinary')
+  const vetDoctors = doctors.filter((d) => d.category === 'veterinary')
+
   return (
     <AppShell>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -220,11 +294,32 @@ function HomePage({
           <div className="mb-10">
             <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Doctor Directory</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
-              Select a specialist from the Hihya Care network.
+              {activeTab === 'human'
+                ? 'Select a specialist from the Hihya Care network.'
+                : 'Al Rahma Pet Clinic — Veterinary Care in Hehya'}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              A cinematic intake surface for a modern clinic booking flow. Choose a doctor, inspect the profile, then open the booking panel.
+              {activeTab === 'human'
+                ? 'Choose a doctor, inspect the profile, then open the booking panel.'
+                : 'Specialized veterinary clinic for cats and dogs — surgery & internal medicine.'}
             </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="mb-8 flex gap-1 rounded-2xl border border-white/10 bg-white/5 p-1 backdrop-blur-xl w-fit">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as 'human' | 'veterinary')}
+                className={`relative rounded-xl px-5 py-2.5 text-sm font-medium transition ${
+                  activeTab === tab.key
+                    ? 'bg-white/10 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {loading ? (
@@ -238,9 +333,13 @@ function HomePage({
           ) : null}
 
           <div className="grid gap-5 md:grid-cols-2">
-            {doctors.map((doctor) => (
-              <DoctorCard key={doctor.id} doctor={doctor} />
-            ))}
+            {activeTab === 'human'
+              ? humanDoctors.map((doctor) => (
+                  <DoctorCard key={doctor.id} doctor={doctor} />
+                ))
+              : vetDoctors.map((doctor) => (
+                  <VeterinaryCard key={doctor.id} doctor={doctor} />
+                ))}
           </div>
         </section>
 
@@ -290,6 +389,10 @@ function DoctorProfilePage({
     )
   }
 
+  if (doctor.category === 'veterinary') {
+    return <VeterinaryProfilePage doctor={doctor} onGoBack={() => navigate('/')} />
+  }
+
   const handleBooking = (_doctorId: string) => {
     navigate(`/book/${_doctorId}`)
   }
@@ -301,6 +404,44 @@ function DoctorProfilePage({
       onGoBack={() => navigate('/')}
     />
   )
+}
+
+function VeterinaryPage({
+  doctors,
+  loading,
+  notice,
+}: {
+  doctors: Map<string, Doctor>
+  loading: boolean
+  notice: string
+}) {
+  const navigate = useNavigate()
+  const { clinicId } = useParams()
+  const doctor = clinicId ? doctors.get(clinicId) : undefined
+
+  if (!doctor || doctor.category !== 'veterinary') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl max-w-md">
+          <h2 className="text-2xl font-semibold text-white">
+            {loading ? 'Loading clinic...' : 'Clinic not found'}
+          </h2>
+          <p className="mt-3 text-slate-300">
+            {loading ? 'Please wait...' : notice || 'The veterinary clinic you requested does not exist.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="mt-6 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-5 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/20"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return <VeterinaryProfilePage doctor={doctor} onGoBack={() => navigate('/')} />
 }
 
 function BookingPage({

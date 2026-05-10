@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, AlertTriangle, ArrowRight, Brain, CheckCircle2, Heart, Mic, MicOff, Send, Sparkles, Stethoscope, Thermometer, User } from 'lucide-react'
+import { Activity, AlertTriangle, Brain, CheckCircle2, Mic, MicOff, Send, Sparkles, Stethoscope, User } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 
 type SpeechRecognitionAPI = {
@@ -20,19 +20,13 @@ type SpeechRecognitionResultList = {
 }
 type SpeechRecognitionConstructor = { new(): SpeechRecognitionAPI }
 
-type TriageStage = 'idle' | 'asking_location' | 'asking_severity' | 'asking_vitals' | 'asking_duration' | 'analyzing' | 'result'
+type TriageStage = 'idle' | 'asking_location' | 'asking_severity' | 'asking_duration' | 'analyzing' | 'result'
 
 type Message = {
   id: string
   role: 'user' | 'assistant'
   text: string
   timestamp: number
-}
-
-type Vitals = {
-  hasFever: boolean | null
-  hasBPIssue: boolean | null
-  bpReading: string
 }
 
 type TriageResult = {
@@ -46,15 +40,45 @@ type TriageResult = {
   location: string
   duration: string
   severityNum: number
-  vitals: Vitals
+  doctorName: string
+  doctorCode: string
+  doctorId: string | null
+  selfCareTips: string[]
 }
 
+const LOCATION_KEYWORDS: { keyword: string; location: string }[] = [
+  { keyword: 'بطن', location: 'البطن' },
+  { keyword: 'جنب', location: 'الجنب' },
+  { keyword: 'صدر', location: 'الصدر' },
+  { keyword: 'قلب', location: 'الصدر' },
+  { keyword: 'راس', location: 'الرأس' },
+  { keyword: 'رأس', location: 'الرأس' },
+  { keyword: 'اسنان', location: 'الأسنان' },
+  { keyword: 'سنة', location: 'الأسنان' },
+  { keyword: 'ضرس', location: 'الأسنان' },
+  { keyword: 'ظهر', location: 'الظهر' },
+  { keyword: 'كتف', location: 'الكتف' },
+  { keyword: 'رقبة', location: 'الرقبة' },
+  { keyword: 'ركبة', location: 'الركبة' },
+  { keyword: 'قدم', location: 'القدم' },
+  { keyword: 'يد', location: 'اليد' },
+  { keyword: 'حلق', location: 'الحلق' },
+  { keyword: 'عين', location: 'العين' },
+  { keyword: 'بول', location: 'البول' },
+  { keyword: 'جلد', location: 'الجلد' },
+  { keyword: 'جسم', location: 'الجلد' },
+  { keyword: 'جسدي', location: 'الجلد' },
+  { keyword: 'رجل', location: 'القدم' },
+  { keyword: 'رجلي', location: 'القدم' },
+  { keyword: 'أيدي', location: 'اليد' },
+  { keyword: 'ايدي', location: 'اليد' },
+]
+
 const QUESTIONS: Record<string, string> = {
-  idle: 'مرحباً، أنا دكتور شريف. إيه اللي جابك النهاردة؟ صف لي الشكوى بتاعتك.',
-  asking_location: 'فين الأعراض دي بالظبط في جسمك؟ (مثلاً: البطن - الصدر - الرأس - المفاصل)',
-  asking_severity: 'قد إيه شدة الأعراض من 1 لـ 10؟ (1 =خفيف، 10 = لا يحتمل)',
-  asking_vitals: 'عندك حرارة ولا قراءة ضغط قريبة؟ ولو فيه أمراض مزمنة زي سكر أو ضغط، قولي.',
-  asking_duration: 'من امتى والأعراض دي معاك؟ (مثلاً: من 3 أيام - من أسبوع)',
+  idle: 'مرحباً أنا دكتور شريف. صف لي شكواك.',
+  asking_location: 'فين المكان بالظبط؟',
+  asking_severity: 'الشدة من 1 لـ 10 كام؟',
+  asking_duration: 'من امتى الكلام دا؟',
 }
 
 const RED_FLAG_PATTERN = new RegExp(
@@ -65,11 +89,29 @@ const RED_FLAG_PATTERN = new RegExp(
 const LOCATION_SPECIALTY_MAP: Record<string, { specialty: string; specialtyAr: string; icon: string }> = {
   رأس: { specialty: 'Neurology', specialtyAr: 'مخ وأعصاب', icon: '🧠' },
   'الرأس': { specialty: 'Neurology', specialtyAr: 'مخ وأعصاب', icon: '🧠' },
-  صدر: { specialty: 'Cardiology', specialtyAr: 'قلب وصدر', icon: '❤️' },
-  قلب: { specialty: 'Cardiology', specialtyAr: 'قلب وصدر', icon: '❤️' },
-  كلية: { specialty: 'Nephrology', specialtyAr: 'كلى ومسالك بولية', icon: '🫘' },
+  صدر: { specialty: 'Cardiology', specialtyAr: 'قلب وأوعية دموية', icon: '❤️' },
+  قلب: { specialty: 'Cardiology', specialtyAr: 'قلب وأوعية دموية', icon: '❤️' },
+  بطن: { specialty: 'Internal Medicine', specialtyAr: 'باطنة', icon: '🩺' },
+  'البطن': { specialty: 'Internal Medicine', specialtyAr: 'باطنة', icon: '🩺' },
+  اسنان: { specialty: 'Dentistry', specialtyAr: 'أسنان', icon: '🦷' },
+  'الأسنان': { specialty: 'Dentistry', specialtyAr: 'أسنان', icon: '🦷' },
+  ظهر: { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
+  'الظهر': { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
+  كتف: { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
+  رقبة: { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
+  قدم: { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
+  يد: { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
+  ركبة: { specialty: 'Orthopedics', specialtyAr: 'عظام', icon: '🦴' },
   بول: { specialty: 'Nephrology', specialtyAr: 'كلى ومسالك بولية', icon: '🫘' },
-  نفسية: { specialty: 'Psychiatry', specialtyAr: 'طب نفسي', icon: '🧘' },
+  جلد: { specialty: 'Dermatology', specialtyAr: 'جلدية', icon: '🧴' },
+}
+
+function extractLocation(text: string): string | null {
+  const t = text.toLowerCase()
+  for (const { keyword, location } of LOCATION_KEYWORDS) {
+    if (t.includes(keyword)) return location
+  }
+  return null
 }
 
 const severityConfig = {
@@ -95,10 +137,10 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
 } as const
 
-const thinkingDotVariants: Record<string, { y: number[]; transition: { duration: number; repeat: number; ease: string } }> = {
+const thinkingDotVariants = {
   animate: {
     y: [0, -8, 0],
-    transition: { duration: 0.6, repeat: Infinity, ease: 'easeInOut' },
+    transition: { duration: 0.6, repeat: Infinity, ease: 'easeInOut' as const },
   },
 }
 
@@ -113,62 +155,96 @@ function safe(val: unknown, fb = ''): string {
   return fb
 }
 
+function getSelfCareTips(symptoms: string, location: string, specialty: string): string[] {
+  const tips: string[] = []
+  const t = symptoms.toLowerCase()
+  const loc = location.toLowerCase()
+
+  if (specialty === 'Internal Medicine' || loc.includes('بطن')) {
+    tips.push('تجنب الأكل الدسم والمقلي')
+    tips.push('اشرب سوائل دافئة ومياه كتير')
+    if (t.includes('إسهال') || t.includes('اسهال')) tips.push('أكل خفيف زي رز وموز وجيلي')
+    if (t.includes('مغص') || t.includes('وجع')) tips.push('كمية مياه دافية على البطن')
+  } else if (specialty === 'Orthopedics' || loc.includes('ظهر') || loc.includes('كتف') || loc.includes('رقبة')) {
+    tips.push('خفف الحركة على المنطقة المصابة')
+    tips.push('كمادات باردة أول 24 ساعة')
+    tips.push('نام في وضعية مريحة وميعدش على الأرض')
+  } else if (specialty === 'Cardiology') {
+    tips.push('لو الألم مستمر أو شديد اتجه للطوارئ فوراً')
+    tips.push('خد قسط من الراحة ومتعملش مجهود')
+  } else if (specialty === 'Dentistry' || loc.includes('سن') || loc.includes('ضرس')) {
+    tips.push('مضادات التهاب متاحة بدون روشتة')
+    tips.push('مأكلش حاجة سخنة ولا باردة جداً')
+    tips.push('غرغرة بمية وملح')
+  } else if (specialty === 'Dermatology') {
+    tips.push('ما تحكش المنطقة عشان متزيدش الالتهاب')
+    tips.push('بلّ الجلد بمية باردة عشان تهدي')
+    tips.push('مرهم مرطب بسيط أو كورتيزون موضعي خفيف')
+    tips.push('تجنب الصابون القوي او العطور على المنطقة')
+    if (t.includes('حساسية')) tips.push('دوا حساسية (مضاد هستامين) ممكن يفيد')
+    if (t.includes('حمراء') || t.includes('احمرار') || t.includes('نقاط')) tips.push('لو النقاط متزايدة أو في سخونية راجع طبيب جلدية')
+  } else if (specialty === 'Neurology') {
+    tips.push('ارتاح في مكان هادي')
+    tips.push('لو الصداع مستمر خد مسكن بسيط')
+  }
+
+  if (!tips.length) {
+    tips.push('خذ قسط من الراحة')
+    tips.push('اشرب سوائل كافية')
+  }
+
+  return tips
+}
+
+const SYMPTOM_SPECIALTY_MAP: { keywords: string[]; specialty: string; specialtyAr: string; icon: string }[] = [
+  { keywords: ['حمراء', 'حكة', 'طفح', 'بقع', 'نقاط', 'جلد', 'جلدي', 'حساسية', 'احمرار', 'هرش', 'شرية', 'التهاب'], specialty: 'Dermatology', specialtyAr: 'جلدية', icon: '🧴' },
+  { keywords: ['سخونية', 'حرارة', 'برد', 'كحة', 'عطس', 'زور'], specialty: 'Internal Medicine', specialtyAr: 'باطنة', icon: '🩺' },
+  { keywords: ['إسهال', 'اسهال', 'ترجيع', 'غثيان', 'مغص'], specialty: 'Internal Medicine', specialtyAr: 'باطنة', icon: '🩺' },
+  { keywords: ['صدر', 'قلب', 'نهجان', 'نبض'], specialty: 'Cardiology', specialtyAr: 'قلب وأوعية دموية', icon: '❤️' },
+]
+
 function inferSpecialty(location: string, symptoms: string): { specialty: string; specialtyAr: string; icon: string } {
+  const t = symptoms.toLowerCase()
+
+  for (const group of SYMPTOM_SPECIALTY_MAP) {
+    if (group.keywords.some(k => t.includes(k))) return { specialty: group.specialty, specialtyAr: group.specialtyAr, icon: group.icon }
+  }
+
   const loc = location.trim()
   for (const [key, val] of Object.entries(LOCATION_SPECIALTY_MAP)) {
-    if (loc.includes(key) || symptoms.includes(key)) return val
+    if (loc.includes(key) || t.includes(key)) return val
   }
-  if (RED_FLAG_PATTERN.test(symptoms)) {
+  if (RED_FLAG_PATTERN.test(t)) {
     return { specialty: 'Emergency', specialtyAr: 'طوارئ عامة', icon: '🚨' }
   }
-  return { specialty: 'Internal Medicine', specialtyAr: 'باطنة عامة', icon: '🩺' }
+  return { specialty: 'Internal Medicine', specialtyAr: 'باطنة', icon: '🩺' }
 }
 
 function fallbackTriage(
   symptoms: string,
   location: string,
   severityStr: string,
-  vitals: Vitals,
   duration: string,
 ): TriageResult {
   const s = parseInt(severityStr, 10) || 5
   const hasEmergency = RED_FLAG_PATTERN.test(symptoms) || s >= 9
-  const fever = vitals.hasFever
-  const bpIssue = vitals.hasBPIssue
 
   const spec = inferSpecialty(location, symptoms)
 
-  let alert = hasEmergency || (fever === true && s >= 7) || (bpIssue === true && s >= 6)
+  let alert = hasEmergency
   let sev: TriageResult['severity'] = 'consultation'
   if (hasEmergency || s >= 9) sev = 'urgent'
-  else if (s >= 7 || fever === true || bpIssue === true) sev = 'urgent'
+  else if (s >= 7) sev = 'urgent'
   else if (s >= 4) sev = 'routine'
 
-  const vitalsText = fever === true ? 'يعاني من حرارة' : fever === false ? 'لا توجد حرارة' : ''
-  const bpText = bpIssue === true ? '، قراءة ضغط غير طبيعية' : bpIssue === false ? '' : ''
-  const vitalsSummary = [vitalsText, bpText].filter(Boolean).join(' ') || 'لا توجد قراءات حيوية مسجلة'
-
-  const specResult = `${spec.specialtyAr} (${spec.specialty})`
-
-  let summary: string
-  if (hasEmergency) {
-    summary = `بناءً على الأعراض (${symptoms}) في ${location}${duration ? ` منذ ${duration}` : ''}${severityStr ? ` بشدة ${s}/10` : ''}، ${vitalsSummary}. هناك علامات خطيرة تستدعي التوجه الفوري للطوارئ.`
-  } else if (s >= 7) {
-    summary = `الأعراض (${symptoms}) في ${location}${duration ? ` منذ ${duration}` : ''} شدتها ${s}/10${vitalsSummary ? `، ${vitalsSummary}` : ''}. تحتاج كشف عاجل خلال 24 ساعة.`
-  } else {
-    summary = `حالتك (${symptoms}) في ${location}${duration ? ` منذ ${duration}` : ''} شدتها ${s}/10${vitalsSummary ? `، ${vitalsSummary}` : ''}. تحتاج متابعة مع ${specResult}.`
-  }
-
   const reason = hasEmergency
-    ? 'وجود علامات خطر تستدعي تدخلاً طبياً فورياً.'
+    ? 'يحتاج تدخل طبي فوري'
     : s >= 7
-      ? 'شدة الأعراض عالية وتحتاج تقييماً عاجلاً.'
-      : s >= 4
-        ? `الأعراض متوسطة الشدة وتحتاج تقييماً روتينياً مع ${specResult}.`
-        : `أعراض خفيفة تحتاج استشارة مع ${specResult}.`
+      ? 'شدة الأعراض عالية'
+      : `الأعراض تناسب ${spec.specialtyAr}`
 
   return {
-    summary,
+    summary: `${symptoms} في ${location}${duration ? ` من ${duration}` : ''} شدتها ${s}/10`,
     severity: sev,
     specialty: spec.specialty,
     specialtyAr: spec.specialtyAr,
@@ -178,35 +254,33 @@ function fallbackTriage(
     location,
     duration,
     severityNum: s,
-    vitals,
+    doctorName: '',
+    doctorCode: '',
+    doctorId: null,
+    selfCareTips: getSelfCareTips(symptoms, location, spec.specialty),
   }
 }
 
-function buildRecommendationText(result: TriageResult): string {
-  const sevLabel = result.severity === 'urgent' ? 'عاجل' : result.severity === 'routine' ? 'روتيني' : 'استشارة'
-  const lines = [
-    `✅ تحليل الحالة`,
-    ``,
-    `📍 الموقع: ${result.location}`,
-    `📊 الشدة: ${result.severityNum}/10`,
-    `${result.duration ? `⏱ المدة: ${result.duration}` : ''}`,
-    `${result.vitals.hasFever === true ? '🌡 حرارة: موجودة' : result.vitals.hasFever === false ? '🌡 حرارة: لا' : ''}`,
-    `${result.vitals.hasBPIssue === true ? '💓 ضغط: غير طبيعي' : ''}`,
-    ``,
-    `🩺 التخصص المقترح: ${result.specialtyAr} (${result.specialty})`,
-    `📋 التصنيف: ${sevLabel}`,
-    `${result.emergency_alert ? '\n⚠️ يجب التوجه للطوارئ فوراً!' : ''}`,
-  ].filter(Boolean).join('\n')
-  return lines
+function buildRecommendationText(r: TriageResult): string {
+  const sevLabel = r.emergency_alert ? 'طوارئ' : r.severity === 'urgent' ? 'عاجل' : r.severity === 'routine' ? 'روتيني' : 'استشارة'
+  let text = `التخصص المناسب: ${r.specialtyAr} (${sevLabel})`
+  if (r.doctorName) {
+    text += `\nأرشحلك: ${r.doctorName}${r.doctorCode ? ` — كود ${r.doctorCode}` : ''}`
+  }
+  if (r.selfCareTips.length) {
+    text += `\n\nنصائح:\n${r.selfCareTips.map(t => `- ${t}`).join('\n')}`
+  }
+  if (r.emergency_alert) text += '\n⚠️ توجه للطوارئ فوراً'
+  return text
 }
 
-export default function AITriageChat() {
+export default function AITriageChat({ section }: { section?: string }) {
   const navigate = useNavigate()
+  const isVet = section === 'veterinary'
   const [stage, setStage] = useState<TriageStage>('idle')
   const [symptoms, setSymptoms] = useState('')
   const [location, setLocation] = useState('')
   const [severity, setSeverity] = useState('')
-  const [vitals, setVitals] = useState<Vitals>({ hasFever: null, hasBPIssue: null, bpReading: '' })
   const [duration, setDuration] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -242,13 +316,11 @@ export default function AITriageChat() {
         emergency_alert: r.emergency_alert,
         summary: r.summary,
         recommendation_reason: r.recommendation_reason,
-        has_fever: vitals.hasFever,
-        has_bp_issue: vitals.hasBPIssue,
         created_at: new Date().toISOString(),
       })
       if (error && !/relation|schema/i.test(error.message)) console.warn('Supabase triage save skipped:', error.message)
     } catch { /* silent */ }
-  }, [symptoms, location, severity, duration, vitals])
+  }, [symptoms, location, severity, duration])
 
   const handleUserInput = useCallback(async (text: string) => {
     const trimmed = text.trim()
@@ -259,27 +331,47 @@ export default function AITriageChat() {
 
     if (stage === 'idle') {
       setSymptoms(trimmed)
-      addMessage('assistant', QUESTIONS.asking_location)
-      setStage('asking_location')
+      const loc = extractLocation(trimmed)
+      if (loc) {
+        setLocation(loc)
+        addMessage('assistant', QUESTIONS.asking_severity)
+        setStage('asking_severity')
+      } else {
+        addMessage('assistant', QUESTIONS.asking_location)
+        setStage('asking_location')
+      }
     } else if (stage === 'asking_location') {
       setLocation(trimmed)
       addMessage('assistant', QUESTIONS.asking_severity)
       setStage('asking_severity')
     } else if (stage === 'asking_severity') {
       setSeverity(trimmed)
-      addMessage('assistant', QUESTIONS.asking_vitals)
-      setStage('asking_vitals')
-    } else if (stage === 'asking_vitals') {
-      const lower = trimmed.toLowerCase()
-      const hasFever = /حرار|حمى|سخون|fever|temperature|٣٨|38/i.test(lower) ? true : /لا|مفيش|no|normal/i.test(lower) ? false : null
-      const hasBP = /ضغط|blood press|pressure|ارتفع|انخفض/i.test(lower) ? true : null
-      setVitals((prev) => ({ ...prev, hasFever, hasBPIssue: hasBP, bpReading: hasBP ? trimmed : '' }))
       addMessage('assistant', QUESTIONS.asking_duration)
       setStage('asking_duration')
     } else if (stage === 'asking_duration') {
       setDuration(trimmed)
 
-      const triageResult = fallbackTriage(symptoms, location, severity, vitals, trimmed)
+      setStage('analyzing')
+      setIsLoading(true)
+
+      let triageResult = fallbackTriage(symptoms, location, severity, trimmed)
+
+      try {
+        const { data: docs } = await supabase.from('doctors').select('id, name, secret_code, specialty, specialtyAr, price')
+        if (docs?.length) {
+          const match = docs.find((d: Record<string, unknown>) => {
+            const specEn = String(d.specialty || '').toLowerCase()
+            const specAr = String(d.specialtyAr || '').toLowerCase()
+            return specEn.includes(triageResult.specialty.toLowerCase()) || specAr.includes(triageResult.specialtyAr) || specEn.includes('general')
+          })
+          if (match) {
+            triageResult.doctorName = String(match.name || '')
+            triageResult.doctorCode = String(match.secret_code || '')
+            triageResult.doctorId = String(match.id || '')
+          }
+        }
+      } catch { /* silent */ }
+
       await pushToSupabase(triageResult)
 
       setIsLoading(false)
@@ -288,9 +380,9 @@ export default function AITriageChat() {
 
       addMessage('assistant', buildRecommendationText(triageResult))
     } else if (stage === 'analyzing') {
-      addMessage('assistant', 'جارٍ التحليل... فضلاً انتظر لحظة.')
+      addMessage('assistant', 'فضلاً انتظر.')
     }
-  }, [stage, symptoms, location, severity, vitals, addMessage, pushToSupabase])
+  }, [stage, symptoms, location, severity, addMessage, pushToSupabase])
 
   const handleVoiceInput = useCallback(() => {
     const SR: SpeechRecognitionConstructor | undefined = (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition || (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor }).webkitSpeechRecognition
@@ -316,7 +408,6 @@ export default function AITriageChat() {
     setSymptoms('')
     setLocation('')
     setSeverity('')
-    setVitals({ hasFever: null, hasBPIssue: null, bpReading: '' })
     setDuration('')
     setMessages([])
     setResult(null)
@@ -358,9 +449,8 @@ export default function AITriageChat() {
           <AnimatePresence mode="popLayout">
             {/* Greeting */}
             {stage === 'idle' && messages.length === 0 && (
-              <motion.div key="greeting" variants={itemVariants} className="rounded-2xl border border-violet-400/20 bg-violet-500/10 px-5 py-4 text-sm leading-relaxed text-violet-100">
-                <p>مرحباً بيك في نظام الفرز الطبي 🏥</p>
-                <p className="mt-2 text-slate-300">احكيلِي إيه اللي بتشتكي منه، وهسألك 4 أسئلة سريعة عشان أحدد التخصص المناسب لحالتك.</p>
+              <motion.div key="greeting" variants={itemVariants} className={`rounded-2xl border px-5 py-4 text-sm leading-relaxed ${isVet ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100' : 'border-violet-400/20 bg-violet-500/10 text-violet-100'}`}>
+                <p>{isVet ? 'أهلاً بك في قسم الحيوانات الأليفة، صف حالة أليفك (قط/كلب) وسأرشح لك العيادة المناسبة.' : 'صف لي شكواك وهسألك 3 أسئلة سريعة عشان أحدد التخصص المناسب.'}</p>
               </motion.div>
             )}
 
@@ -458,26 +548,55 @@ export default function AITriageChat() {
                   <div className="mb-4 grid grid-cols-2 gap-2">
                     <DataChip icon={Stethoscope} label="الموقع" value={safe(result.location)} />
                     <DataChip icon={Activity} label="الشدة" value={`${result.severityNum}/10`} />
-                    <DataChip icon={Thermometer} label="الحرارة" value={result.vitals.hasFever === true ? 'موجودة' : result.vitals.hasFever === false ? 'لا' : '---'} />
-                    <DataChip icon={Heart} label="الضغط" value={result.vitals.hasBPIssue === true ? 'غير طبيعي' : result.vitals.hasBPIssue === false ? 'طبيعي' : '---'} />
                     {result.duration ? <DataChip icon={Activity} label="المدة" value={safe(result.duration)} /> : null}
+                    {result.doctorName ? <DataChip icon={User} label="الطبيب" value={result.doctorName} /> : null}
                   </div>
 
+                  {/* Self-Care Tips */}
+                  {result.selfCareTips.length > 0 && !result.emergency_alert && (
+                    <div className="mb-4 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4">
+                      <p className="text-xs font-semibold text-cyan-200 mb-2">نصائح للتعامل مع الحالة</p>
+                      <ul className="space-y-1">
+                        {result.selfCareTips.map((tip, i) => (
+                          <li key={i} className="text-xs text-slate-300 flex items-start gap-2">
+                            <span className="text-cyan-400 mt-0.5">•</span>
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Doctor Card */}
+                  {result.doctorId && (
+                    <div className="mb-4 rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-slate-400">الطبيب المقترح</p>
+                          <p className="text-sm font-semibold text-white mt-0.5">{result.doctorName}</p>
+                          {result.doctorCode ? (
+                            <p className="text-[11px] font-mono text-emerald-400/80 mt-0.5">كود: {result.doctorCode}</p>
+                          ) : null}
+                        </div>
+                        <button type="button" onClick={() => navigate(`/book/${result.doctorId}`)}
+                          className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:brightness-110"
+                        >
+                          احجز موعد
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Recommendation Reason */}
-                  <div className="mb-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3">
-                    <p className="text-xs font-semibold text-violet-200">سبب الترشيح</p>
-                    <p className="mt-1 text-xs text-slate-400">{safe(result.recommendation_reason)}</p>
-                  </div>
+                  {result.recommendation_reason && (
+                    <div className="mb-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3">
+                      <p className="text-xs font-semibold text-violet-200">سبب الترشيح</p>
+                      <p className="mt-1 text-xs text-slate-400">{safe(result.recommendation_reason)}</p>
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => navigate('/dashboard')}
-                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-5 py-2.5 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/25"
-                    >
-                      <User className="h-4 w-4" />
-                      عرض في لوحة التحكم
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
                     <button type="button" onClick={restartTriage}
                       className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10"
                     >
@@ -513,10 +632,10 @@ export default function AITriageChat() {
                   <Send className="h-5 w-5" />
                 </button>
               </div>
-            ) : stage === 'asking_location' || stage === 'asking_vitals' ? (
+            ) : stage === 'asking_location' ? (
               <div className="flex gap-2">
                 <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUserInput(inputText)}
-                  placeholder={stage === 'asking_location' ? 'حدد مكان الأعراض...' : 'هل عندك حرارة أو قراءة ضغط؟'}
+                  placeholder="حدد مكان الأعراض..."
                   className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/40"
                   disabled={isLoading}
                 />
