@@ -283,7 +283,7 @@ function HomePage({
   notice: string
 }) {
   const [activeTab, setActiveTab] = useState<'human' | 'veterinary'>('human')
-  const [bookingType, setBookingType] = useState<BookingType | null>(null)
+  const [, setBookingType] = useState<BookingType | null>(null)
 
   const humanDoctors = doctors.filter((d) => d.category !== 'veterinary')
   const vetDoctors = doctors.filter((d) => d.category === 'veterinary')

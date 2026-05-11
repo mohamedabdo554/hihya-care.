@@ -120,7 +120,7 @@ export default function MedicalFileUploader({
               max={120}
               value={age}
               onChange={e => { const v = e.target.value; setAge(v); fireIntake(v, gender, symptoms, files) }}
-              className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-sm text-slate-900 shadow-inner outline-none ring-blue-400/0 transition focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
+              className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-base text-slate-900 shadow-inner outline-none ring-blue-400/0 transition focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
               placeholder={isAr ? 'مثال: 35' : 'e.g. 35'}
             />
         </label>
@@ -129,7 +129,7 @@ export default function MedicalFileUploader({
           <select
             value={gender}
             onChange={e => { const v = e.target.value; setGender(v); fireIntake(age, v, symptoms, files) }}
-            className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
+            className="w-full rounded-xl border border-blue-100/80 bg-white/80 px-4 py-2.5 text-base text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
           >
             <option value="">{isAr ? '— اختر —' : '— Select —'}</option>
             <option value={labels.male}>{labels.male}</option>
@@ -151,7 +151,7 @@ export default function MedicalFileUploader({
           onChange={e => { const v = e.target.value; setSymptoms(v); fireIntake(age, gender, v, files) }}
           placeholder={labels.placeholder}
           rows={compact ? 3 : 4}
-          className="w-full resize-none rounded-xl border border-blue-100/80 bg-white/80 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
+          className="w-full resize-none rounded-xl border border-blue-100/80 bg-white/80 px-4 py-3 text-base text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-200/60 dark:border-white/10 dark:bg-slate-950/50 dark:text-white"
         />
       </label>
 

@@ -146,7 +146,7 @@ export default function EnhancedBookingFlow({ doctor, onConfirm, onCancel }) {
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder="أحمد محمود"
-                    className="w-full rounded-lg bg-slate-950/60 border border-white/10 px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-400/50 outline-none transition"
+                    className="w-full rounded-lg bg-slate-950/60 border border-white/10 px-4 py-3 text-base text-white placeholder-slate-500 focus:border-cyan-400/50 outline-none transition"
                   />
                 </div>
                 <div>
@@ -156,7 +156,7 @@ export default function EnhancedBookingFlow({ doctor, onConfirm, onCancel }) {
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     placeholder="966501234567"
-                    className="w-full rounded-lg bg-slate-950/60 border border-white/10 px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-400/50 outline-none transition"
+                    className="w-full rounded-lg bg-slate-950/60 border border-white/10 px-4 py-3 text-base text-white placeholder-slate-500 focus:border-cyan-400/50 outline-none transition"
                   />
                 </div>
               </div>
@@ -238,7 +238,7 @@ export default function EnhancedBookingFlow({ doctor, onConfirm, onCancel }) {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="أي ملاحظات تود إخبار الدكتور بها..."
-                className="w-full h-24 rounded-lg bg-slate-950/60 border border-white/10 px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-400/50 outline-none transition resize-none"
+                className="w-full h-24 rounded-lg bg-slate-950/60 border border-white/10 px-4 py-3 text-base text-white placeholder-slate-500 focus:border-cyan-400/50 outline-none transition resize-none"
               />
             </div>
 

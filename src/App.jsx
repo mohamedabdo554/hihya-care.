@@ -954,6 +954,57 @@ function saveLocalAppointment(appointment) {
   return appointment
 }
 
+/* ── Supabase retry queue ── */
+const RETRY_QUEUE_KEY = 'hihya-supabase-retry-queue'
+
+function readRetryQueue() {
+  try { return JSON.parse(localStorage.getItem(RETRY_QUEUE_KEY) || '[]') } catch { return [] }
+}
+
+function writeRetryQueue(queue) {
+  try { localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify(queue)) } catch {}
+}
+
+function enqueueRetry(payload) {
+  const queue = readRetryQueue()
+  queue.push({ payload, createdAt: Date.now(), attempts: 0 })
+  writeRetryQueue(queue)
+  // Immediately attempt sync
+  void processRetryQueue()
+}
+
+async function processRetryQueue() {
+  const queue = readRetryQueue()
+  if (!queue.length) return
+  const remaining = []
+  for (const item of queue) {
+    // Strip columns that don't exist in Supabase
+    if (item.payload) {
+      delete item.payload.service_type
+      delete item.payload.pet_name
+      delete item.payload.pet_type
+    }
+    try {
+      const { error } = await supabase.from('appointments').insert([item.payload])
+      if (error) throw error
+      // Success — don't add back to queue
+    } catch {
+      item.attempts++
+      // Keep for up to 24h, max 50 retries
+      if (item.attempts < 50 && Date.now() - item.createdAt < 86400000) {
+        remaining.push(item)
+      }
+    }
+  }
+  writeRetryQueue(remaining)
+}
+
+// Periodic retry
+function startRetryScheduler() {
+  const id = setInterval(() => void processRetryQueue(), 30000)
+  return () => clearInterval(id)
+}
+
 function updateLocalAppointmentStatus(appointmentId, status) {
   const nextAppointments = readLocalAppointments().map(appointment => (
     appointment.id === appointmentId ? { ...appointment, status } : appointment
@@ -2068,6 +2119,7 @@ function App() {
 
 function AppShell({ children, ui }) {
   const { language, theme, setLanguage, setTheme, themePulse = false, section, setSection } = ui
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const t = key => getText(language, key)
   const isArabic = language === 'ar'
   const isDark = theme === 'dark'
@@ -2094,7 +2146,7 @@ function AppShell({ children, ui }) {
       <div className="absolute right-10 top-24 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-500/10" />
 
         <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-        <header className="sticky top-2 z-30 mb-3 rounded-2xl border border-slate-200/80 bg-white/92 px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-slate-950/72 dark:shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:top-3 sm:mb-4 sm:px-4 sm:py-2.5 sm:rounded-3xl">
+        <header className="sticky top-0 z-30 mb-4 rounded-2xl border border-slate-200/80 bg-white/92 px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/15 dark:bg-slate-950/72 dark:shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:sticky sm:top-3 sm:mb-4 sm:px-4 sm:py-2.5 sm:rounded-3xl">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <Link to="/" className="flex items-center gap-2 text-slate-900 dark:text-cyan-100">
               <HihyaEmblem theme={theme} />
@@ -2107,19 +2159,19 @@ function AppShell({ children, ui }) {
             </Link>
 
             <div className="flex items-center gap-1 sm:gap-2">
-              <Link to="/dashboard" className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/15 to-emerald-400/15 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.2)] dark:text-cyan-200 dark:from-cyan-500/15 dark:to-emerald-500/15 sm:px-3">
-                <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <Link to="/dashboard" className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300/25 bg-gradient-to-r from-cyan-400/15 to-emerald-400/15 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 transition hover:shadow-[0_0_16px_rgba(34,211,238,0.2)] active:scale-[0.95] dark:text-cyan-200 dark:from-cyan-500/15 dark:to-emerald-500/15 sm:px-3">
+                <svg className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 <span className="hidden sm:inline">{isArabic ? 'لوحة التحكم' : 'Dashboard'}</span>
               </Link>
-              <Link to="/ai-triage" className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300/25 bg-gradient-to-r from-violet-400/15 to-cyan-400/15 px-2 py-1.5 text-[10px] font-semibold text-violet-700 transition hover:shadow-[0_0_16px_rgba(139,92,246,0.2)] dark:text-violet-200 dark:from-violet-500/15 dark:to-cyan-500/15 sm:px-3">
-                <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+              <Link to="/ai-triage" className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300/25 bg-gradient-to-r from-violet-400/15 to-cyan-400/15 px-2 py-1.5 text-[10px] font-semibold text-violet-700 transition hover:shadow-[0_0_16px_rgba(139,92,246,0.2)] active:scale-[0.95] dark:text-violet-200 dark:from-violet-500/15 dark:to-cyan-500/15 sm:px-3">
+                <svg className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                 <span className="hidden sm:inline">{isArabic ? 'المساعد الذكي' : 'AI Chat'}</span>
               </Link>
               {/* Section Toggle */}
               <button
                 type="button"
                 onClick={() => setSection(section === 'veterinary' ? 'human' : 'veterinary')}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-2 py-1.5 text-[10px] font-semibold transition sm:px-3 ${
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-2 py-1.5 text-[10px] font-semibold transition active:scale-[0.95] sm:px-3 ${
                   section === 'veterinary'
                     ? 'border-emerald-300/30 bg-gradient-to-r from-emerald-400/20 to-teal-400/20 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
                     : 'border-blue-300/25 bg-gradient-to-r from-blue-400/15 to-cyan-400/15 text-blue-200'
@@ -2128,40 +2180,18 @@ function AppShell({ children, ui }) {
               >
                 {section === 'veterinary' ? (
                   <>
-                    <Stethoscope className="h-3.5 w-3.5 shrink-0" />
+                    <Stethoscope className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
                     <span className="hidden sm:inline">{isArabic ? 'بشري' : 'Human'}</span>
                   </>
                 ) : (
                   <>
-                    <PawPrint className="h-3.5 w-3.5 shrink-0" />
+                    <PawPrint className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
                     <span className="hidden sm:inline">{isArabic ? 'بيطري' : 'Vet'}</span>
                   </>
                 )}
               </button>
-              <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:hidden">
-                <button
-                  type="button"
-                  onClick={() => setLanguage('en')}
-                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
-                    language === 'en'
-                      ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
-                      : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
-                  }`}
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLanguage('ar')}
-                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
-                    language === 'ar'
-                      ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
-                      : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
-                  }`}
-                >
-                  AR
-                </button>
-              </div>
+
+              {/* Desktop language & theme */}
               <div className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:flex">
                 <span className="px-1.5 text-[9px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('language')}</span>
                 <button
@@ -2188,7 +2218,7 @@ function AppShell({ children, ui }) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
+              <div className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60 sm:flex">
                 <span className="px-1.5 text-[9px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
                 <button
                   type="button"
@@ -2199,22 +2229,43 @@ function AppShell({ children, ui }) {
                       : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
                   }`}
                 >
-                  {t('light')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTheme('dark')}
-                  className={`min-w-7 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950'
-                      : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-white/10'
-                  }`}
-                >
                   {t('dark')}
                 </button>
               </div>
+
+              {/* Hamburger — mobile only */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(o => !o)}
+                className="flex sm:hidden items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-slate-600 dark:text-slate-300 active:scale-[0.9] transition"
+                aria-label={isArabic ? 'القائمة' : 'Menu'}
+              >
+                {mobileMenuOpen ? (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                )}
+              </button>
             </div>
           </div>
+
+          {/* Mobile menu panel */}
+          {mobileMenuOpen && (
+            <div className="mt-3 border-t border-white/10 pt-3 sm:hidden">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('language')}</span>
+                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
+                  <button onClick={() => setLanguage('en')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${language === 'en' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>EN</button>
+                  <button onClick={() => setLanguage('ar')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${language === 'ar' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>AR</button>
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
+                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
+                  <button onClick={() => setTheme('light')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${theme === 'light' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>{t('light')}</button>
+                  <button onClick={() => setTheme('dark')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${theme === 'dark' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>{t('dark')}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </header>
 
         <div dir={isArabic ? 'rtl' : 'ltr'}>
@@ -2333,7 +2384,7 @@ const DoctorCard = memo(function DoctorCard({ doctor, index, ui }) {
       tabIndex={0}
       onClick={openProfile}
       onKeyDown={onCardKeyDown}
-      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.6rem] border border-white/30 bg-gradient-to-br ${tone.surface} p-3 shadow-[0_14px_45px_rgba(15,23,42,0.08)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:border-white/40 ${tone.glow} dark:border-white/10 dark:bg-white/5 sm:p-4`}
+      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.6rem] border border-white/30 bg-gradient-to-br ${tone.surface} p-3 shadow-[0_14px_45px_rgba(15,23,42,0.08)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:border-white/40 active:scale-[0.98] ${tone.glow} dark:border-white/10 dark:bg-white/5 sm:p-4`}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/75 via-white/55 to-white/90 dark:from-slate-950/75 dark:via-slate-950/55 dark:to-slate-950/88" />
       <div className="absolute -top-10 left-6 h-16 w-16 rounded-full bg-white/30 blur-2xl dark:bg-white/10" />
@@ -2527,6 +2578,7 @@ function HomePage({ doctors, loading, notice, ui }) {
   const [priceFilter, setPriceFilter] = useState('all')
   const [clinicStatusNonce, setClinicStatusNonce] = useState(0)
   const [bookingType, setBookingType] = useState(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const doctorsRef = useRef(null)
 
   const handleBookingTypeSelect = useCallback((type) => {
@@ -2607,7 +2659,7 @@ function HomePage({ doctors, loading, notice, ui }) {
       <div className="mb-8 rounded-3xl p-6">
         <div className="mb-6 text-center">
           <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Our Services</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-white">
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white sm:text-3xl md:text-4xl lg:text-5xl">
             {isArabic ? 'اختر نوع الخدمة' : 'Choose Service Type'}
           </h2>
           <p className="mt-2 text-sm text-slate-400">
@@ -2620,17 +2672,17 @@ function HomePage({ doctors, loading, notice, ui }) {
           <button
             type="button"
             onClick={() => handleBookingTypeSelect('tele-consultation')}
-            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 ${
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-5 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 active:scale-[0.98] min-h-[180px] md:p-6 ${
               bookingType === 'tele-consultation' ? 'border-purple-400/60 shadow-lg shadow-purple-500/30' : 'border-purple-500/30'
             }`}
             style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(168,85,247,0.2), rgba(217,70,239,0.15))' }}
           >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-purple-500/15 text-3xl shadow-inner backdrop-blur-xl">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-purple-500/15 text-2xl shadow-inner backdrop-blur-xl md:h-16 md:w-16 md:text-3xl">
               📞
             </div>
-            <h3 className="mb-1 text-lg font-bold text-white">{isArabic ? 'استشارة هاتفية' : 'Phone Consultation'}</h3>
-            <p className="text-sm text-slate-400">{isArabic ? 'تحدث مع طبيبك الآن من منزلك' : 'Talk to your doctor from home'}</p>
-            <div className="mt-4 w-full rounded-xl border border-purple-400/30 bg-purple-600/80 py-2.5 text-center text-sm font-bold text-white transition group-hover:bg-purple-500">
+            <h3 className="mb-1 text-base font-bold text-white md:text-lg">{isArabic ? 'استشارة هاتفية' : 'Phone Consultation'}</h3>
+            <p className="text-xs text-slate-400 md:text-sm">{isArabic ? 'تحدث مع طبيبك الآن من منزلك' : 'Talk to your doctor from home'}</p>
+            <div className="mt-3 w-full rounded-xl border border-purple-400/30 bg-purple-600/80 py-3 text-center text-sm font-bold text-white transition group-hover:bg-purple-500 md:mt-4">
               {isArabic ? 'احجز استشارتك' : 'Book Consultation'}
             </div>
           </button>
@@ -2639,17 +2691,17 @@ function HomePage({ doctors, loading, notice, ui }) {
           <button
             type="button"
             onClick={() => handleBookingTypeSelect('clinic-visit')}
-            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 ${
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-5 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 active:scale-[0.98] min-h-[180px] md:p-6 ${
               bookingType === 'clinic-visit' ? 'border-blue-400/60 shadow-lg shadow-blue-500/30' : 'border-blue-400/30'
             }`}
             style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.25), rgba(37,99,235,0.2), rgba(8,145,178,0.15))' }}
           >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-blue-500/15 text-3xl shadow-inner backdrop-blur-xl">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-blue-500/15 text-2xl shadow-inner backdrop-blur-xl md:h-16 md:w-16 md:text-3xl">
               🩺
             </div>
-            <h3 className="mb-1 text-lg font-bold text-white">{isArabic ? 'كشف العيادة' : 'Clinic Visit'}</h3>
-            <p className="text-sm text-slate-400">{isArabic ? 'احجز موعدك التقليدي في العيادة' : 'Book your regular clinic visit'}</p>
-            <div className="mt-4 w-full rounded-xl border border-blue-400/30 bg-blue-600/80 py-2.5 text-center text-sm font-bold text-white transition group-hover:bg-blue-500">
+            <h3 className="mb-1 text-base font-bold text-white md:text-lg">{isArabic ? 'كشف العيادة' : 'Clinic Visit'}</h3>
+            <p className="text-xs text-slate-400 md:text-sm">{isArabic ? 'احجز موعدك التقليدي في العيادة' : 'Book your regular clinic visit'}</p>
+            <div className="mt-3 w-full rounded-xl border border-blue-400/30 bg-blue-600/80 py-3 text-center text-sm font-bold text-white transition group-hover:bg-blue-500 md:mt-4">
               {isArabic ? 'احجز موعدك' : 'Book Appointment'}
             </div>
           </button>
@@ -2658,20 +2710,20 @@ function HomePage({ doctors, loading, notice, ui }) {
           <button
             type="button"
             onClick={() => handleBookingTypeSelect('urgent-care')}
-            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 ${
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-5 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 active:scale-[0.98] min-h-[180px] md:p-6 ${
               bookingType === 'urgent-care' ? 'border-amber-400/60 shadow-lg shadow-amber-500/30' : 'border-amber-500/30'
             }`}
             style={{ background: 'linear-gradient(135deg, #020617, #030712, #09090b)' }}
           >
-            <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 rounded-b-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-1 text-xs font-bold text-white shadow-lg">
+            <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 rounded-b-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 text-[10px] font-bold text-white shadow-lg md:px-4 md:text-xs">
               {isArabic ? 'الأكثر طلباً ⭐' : 'Most Popular ⭐'}
             </div>
-            <div className="mx-auto mb-4 mt-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-amber-500/20 text-3xl shadow-inner backdrop-blur-xl">
+            <div className="mx-auto mb-3 mt-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-amber-500/20 text-2xl shadow-inner backdrop-blur-xl md:mb-4 md:mt-4 md:h-16 md:w-16 md:text-3xl">
               ⚡
             </div>
-            <h3 className="mb-1 text-lg font-bold text-amber-200">{isArabic ? 'زيارة منزلية فورية' : 'Urgent Home Visit'}</h3>
-            <p className="text-sm text-slate-400">{isArabic ? 'اطلب طبيب للمنزل فوراً للحالات الطارئة' : 'Request an immediate home visit for emergencies'}</p>
-            <div className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 py-2.5 text-center text-sm font-bold text-white shadow-lg shadow-amber-500/30">
+            <h3 className="mb-1 text-base font-bold text-amber-200 md:text-lg">{isArabic ? 'زيارة منزلية فورية' : 'Urgent Home Visit'}</h3>
+            <p className="text-xs text-slate-400 md:text-sm">{isArabic ? 'اطلب طبيب للمنزل فوراً للحالات الطارئة' : 'Request an immediate home visit for emergencies'}</p>
+            <div className="mt-3 w-full rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 py-3 text-center text-sm font-bold text-white shadow-lg shadow-amber-500/30 md:mt-4">
               {isArabic ? 'اطلب زيارة منزلية' : 'Request Home Visit'}
             </div>
           </button>
@@ -2687,7 +2739,7 @@ function HomePage({ doctors, loading, notice, ui }) {
                 <PawPrint className="h-4 w-4" />
                 {isArabic ? 'قسم الطب البيطري' : 'Veterinary Medicine'}
               </div>
-              <h2 className="mt-4 text-4xl font-extrabold text-white drop-shadow-lg">
+              <h2 className="mt-4 text-2xl font-extrabold text-white drop-shadow-lg sm:text-3xl md:text-4xl">
                 {isArabic ? 'العيادات البيطرية' : 'Veterinary Clinics'}
               </h2>
               <p className="mt-1 text-lg font-bold text-amber-100">
@@ -4186,6 +4238,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   })
   const [waConfirmed, setWaConfirmed] = useState(false)
   const [bookingData, setBookingData] = useState(null)
+  const [syncStatus, setSyncStatus] = useState('synced') // 'synced' | 'syncing' | 'pending'
 
   const doctor = doctorId ? doctorLookup.get(doctorId) : null
   const selectedDoctor = doctor ? localizeDoctor(ui.language, doctor) : (doctorId ? localizeDoctor(ui.language, createFallbackDoctor(doctorId)) : null)
@@ -4208,10 +4261,12 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   const isHomeVisit = bookingServiceType === 'home-visit'
   const trimmedAddr = homeVisitAddress.trim()
   const homeAddrLine = isHomeVisit && trimmedAddr ? `📍 العنوان: ${trimmedAddr}\n` : ''
-  const homeMapLine = isHomeVisit && homeVisitLocationLink ? `🗺️ الرابط: ${homeVisitLocationLink}\n` : ''
-  const whatsappMessage = isVet
-    ? `مرحباً Hihya Care 👋\nلقد حجزت موعداً للكشف البيطري مع ${selectedDoctor?.name}\nنوع الخدمة: ${ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}\nالسعر: ${serviceTypePrice.price} ج.م\n${homeAddrLine}${homeMapLine}التاريخ: ${appointmentDate}\nالاسم: ${patientName}\nالرجاء تأكيد الحجز`
-    : `مرحباً Hihya Care 👋\nلقد حجزت موعداً مع ${selectedDoctor?.name}\nنوع الخدمة: ${ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}\nالسعر: ${serviceTypePrice.price} ج.م\n${homeAddrLine}${homeMapLine}التاريخ: ${appointmentDate}\nالاسم: ${patientName}\nالرجاء تأكيد الحجز`
+  const homeMapLine = isHomeVisit && homeVisitLocationLink ? `🗺️ الخريطة: ${homeVisitLocationLink}\n` : ''
+  const symptomsWa = symptoms.trim()
+  const sympLine = symptomsWa ? `🩺 الأعراض: ${symptomsWa}\n` : ''
+  const petLineWa = isVet ? (petType ? `🐾 النوع: ${petType === 'cat' ? 'قطة' : 'كلب'}\n` : '') + (patientName.trim() ? `🐾 الاسم: ${patientName.trim()}\n` : '') + (ownerName.trim() ? `👤 المالك: ${ownerName.trim()}\n` : '') : ''
+  const baseMsg = `🔵 Hihya Care — حجز جديد\n━━━━━━━━━━━━━━━\n👨‍⚕️ الطبيب: ${selectedDoctor?.name}\n🏷️ التخصص: ${selectedDoctor?.specialty}\n📋 الخدمة: ${ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}\n💰 السعر: ${serviceTypePrice.price} ج.م\n${petLineWa}${sympLine}${homeAddrLine}${homeMapLine}📅 التاريخ: ${appointmentDate}\n👤 الاسم: ${patientName}\n📞 الهاتف: ${phoneNumber}\n━━━━━━━━━━━━━━━\n✅ الرجاء تأكيد الحجز`
+  const whatsappMessage = baseMsg
 
   const whatsappLink = selectedDoctor?.phone_number
     ? `https://wa.me/${normalizePhoneForWa(selectedDoctor.phone_number)}?text=${encodeURIComponent(whatsappMessage)}`
@@ -4225,6 +4280,18 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
     const timeoutId = window.setTimeout(() => setToast(null), 4200)
     return () => window.clearTimeout(timeoutId)
   }, [toast])
+
+  // Start Supabase retry scheduler
+  useEffect(() => startRetryScheduler(), [])
+
+  // Periodically check sync status
+  useEffect(() => {
+    const id = setInterval(() => {
+      const queue = readRetryQueue()
+      setSyncStatus(queue.length > 0 ? 'pending' : 'synced')
+    }, 5000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     if (!slotParam) {
@@ -4335,8 +4402,8 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
     setStatus('loading')
     setFeedback(ui.language === 'ar' ? 'جارٍ تأكيد الموعد...' : 'Securing appointment...')
 
-    // Also try saving to Supabase (best-effort)
-    try {
+    // Build Supabase payload
+    const buildSupabasePayload = () => {
       const symptomsParts = [
         intakeData.age ? `العمر: ${intakeData.age}` : '',
         intakeData.gender ? `النوع: ${intakeData.gender}` : '',
@@ -4344,7 +4411,6 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         trimmedSymptoms,
         attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
       ]
-      // Embed attachment base64 data in symptoms so it travels cross-device
       if (attachments.length) {
         symptomsParts.push('__FILES__' + attachments.map(a => encodeURIComponent(JSON.stringify({ name: a.name, data: a.data, size: a.size }))).join('||'))
       }
@@ -4352,7 +4418,8 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         const petInfo = [petTypeLabel && `النوع: ${petTypeLabel}`, trimmedName && `الحيوان: ${trimmedName}`, trimmedOwner && `صاحب الحيوان: ${trimmedOwner}`].filter(Boolean).join(' | ')
         symptomsParts.unshift(petInfo)
       }
-      const supabasePayload = {
+      symptomsParts.unshift(`[SERVICE_TYPE:${bookingServiceTypeToDb}]`)
+      const payload = {
         patient_name: patientNameForDb,
         patient_phone: trimmedPhone,
         doctor_id: doctorId,
@@ -4361,30 +4428,30 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         appointment_time: appointmentTime,
         status: 'Pending',
         symptoms: symptomsParts.filter(Boolean).join('\n') || null,
-        service_type: bookingServiceTypeToDb,
       }
-      if (isVet) {
-        supabasePayload.pet_name = trimmedName
-        supabasePayload.pet_type = petTypeLabel
-        if (trimmedOwner) supabasePayload.owner_name = trimmedOwner
-      }
-      // If columns exist in Supabase, include them
-      if (intakeData.age) supabasePayload.patient_age = intakeData.age
-      if (intakeData.gender) supabasePayload.patient_gender = intakeData.gender
+      if (isVet && trimmedOwner) payload.owner_name = trimmedOwner
+      if (intakeData.age) payload.patient_age = intakeData.age
+      if (intakeData.gender) payload.patient_gender = intakeData.gender
+      return payload
+    }
+
+    // Try save to Supabase — if fails, add to retry queue
+    const supabasePayload = buildSupabasePayload()
+    try {
       const { error } = await supabase.from('appointments').insert([supabasePayload])
       if (error) {
-        // If columns don't exist yet, retry without them
         if (error.message?.includes('patient_age') || error.message?.includes('patient_gender')) {
-          delete supabasePayload.patient_age
-          delete supabasePayload.patient_gender
+          delete supabasePayload.patient_age; delete supabasePayload.patient_gender
           const { error: retryErr } = await supabase.from('appointments').insert([supabasePayload])
-          if (retryErr) console.error('[Booking] Supabase retry error:', retryErr)
+          if (retryErr) { enqueueRetry(supabasePayload); setSyncStatus('pending'); console.error('[Booking] Queued for retry:', retryErr) }
         } else {
-          console.error('[Booking] Supabase insert error:', error)
+          enqueueRetry(supabasePayload); setSyncStatus('pending')
+          console.error('[Booking] Queued for retry:', error)
         }
       }
     } catch (supaErr) {
-      console.error('[Booking] Supabase insert exception:', supaErr)
+      enqueueRetry(supabasePayload); setSyncStatus('pending')
+      console.error('[Booking] Exception — queued for retry:', supaErr)
     }
 
     const whatsappApiUrl = String(import.meta.env.VITE_WHATSAPP_API_URL || '').trim()
@@ -4925,6 +4992,19 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
                         <p><strong>{ui.language === 'ar' ? 'الخدمة' : 'Service'}:</strong> {serviceTypePrice.icon} {ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}</p>
                         <p><strong>{ui.language === 'ar' ? 'السعر' : 'Price'}:</strong> {serviceTypePrice.price} ج.م</p>
                       </div>
+                      {syncStatus === 'pending' ? (
+                        <div className="flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+                          {ui.language === 'ar'
+                            ? '⏳ جارٍ مزامنة الحجز مع الخادم — سيتم التحديث تلقائياً'
+                            : '⏳ Syncing booking with server — will update automatically'}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                          {ui.language === 'ar' ? '✅ تمت المزامنة مع الخادم' : '✅ Synced with server'}
+                        </div>
+                      )}
                     </div>
                   ) : isWaPending ? (
                     <div className="mt-2 space-y-3">

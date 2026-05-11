@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
@@ -57,6 +57,13 @@ type Appointment = {
   appointment_time: string
   status: 'booked' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pharmacy'
   service_type?: 'normal' | 'phone' | 'urgent'
+  symptoms?: string | null
+}
+
+function extractServiceType(symptoms: string | null | undefined): 'normal' | 'phone' | 'urgent' {
+  const match = symptoms?.match(/\[SERVICE_TYPE:(\w+)\]/)
+  if (match?.[1] === 'phone' || match?.[1] === 'urgent') return match[1]
+  return 'normal'
 }
 
 type DoctorProfile = {
@@ -277,8 +284,8 @@ export function DoctorDashboard() {
 
     setDoctor({ id: String(doctorRow.id), name: String(doctorRow.name ?? 'الدكتور'), specialty: String(doctorRow.specialty ?? ''), phone_number: String(doctorRow.phone_number ?? ''), clinic_status: (doctorRow.clinic_status as DoctorProfile['clinic_status']) || 'open', base_price: doctorRow.base_price != null ? Number(doctorRow.base_price) : (doctorRow.price_value != null ? Number(doctorRow.price_value) : 100) })
 
-    const { data: apptsRows } = await supabase.from('appointments').select('id, patient_name, patient_phone, appointment_date, appointment_time, status, service_type').eq('doctor_id', doctorRow.id).gte('appointment_date', startOfTodayISO()).lte('appointment_date', endOfTodayISO()).order('appointment_date', { ascending: true })
-    setAppointments((apptsRows ?? []) as Appointment[])
+    const { data: apptsRows } = await supabase.from('appointments').select('id, patient_name, patient_phone, appointment_date, appointment_time, status, symptoms').eq('doctor_id', doctorRow.id).gte('appointment_date', startOfTodayISO()).lte('appointment_date', endOfTodayISO()).order('appointment_date', { ascending: true })
+    setAppointments((apptsRows ?? []).map((a: Record<string, unknown>) => ({ ...a, service_type: extractServiceType(a.symptoms as string | null | undefined) })) as Appointment[])
 
     const { data: triageRows } = await supabase.from('triage_results').select('*').order('created_at', { ascending: false }).limit(20)
     if (triageRows && Array.isArray(triageRows)) setTriageEntries(triageRows as TriageEntry[])
@@ -299,14 +306,15 @@ export function DoctorDashboard() {
         const d = new Date(row.appointment_date as string); const s = new Date(startOfTodayISO()); const e = new Date(endOfTodayISO())
         if (d < s || d > e) return
         if (payload.eventType === 'INSERT') {
-          const newAppt = payload.new as Appointment
+          const raw = payload.new as Record<string, unknown>
+          const newAppt = { ...raw, service_type: extractServiceType(raw.symptoms as string | null | undefined) } as Appointment
           setAppointments((prev) => [...prev, newAppt].sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()))
           if (newAppt.service_type === 'urgent') {
             playBeep()
             setToast(`🚨 موعد عاجل جديد: ${safeString(newAppt.patient_name, 'مريض')}`)
           }
         }
-        else if (payload.eventType === 'UPDATE') setAppointments((prev) => prev.map((item) => (item.id === (payload.new as Appointment).id ? (payload.new as Appointment) : item)))
+        else if (payload.eventType === 'UPDATE') setAppointments((prev) => prev.map((item) => (item.id === ((payload.new as Record<string, unknown>).id as string) ? { ...(payload.new as Record<string, unknown>), service_type: extractServiceType((payload.new as Record<string, unknown>).symptoms as string | null | undefined) } as Appointment : item)))
         else if (payload.eventType === 'DELETE') setAppointments((prev) => prev.filter((item) => item.id !== (payload.old as Appointment).id))
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'triage_results' }, (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
@@ -555,13 +563,13 @@ export function DoctorDashboard() {
                     {sortedByStatus.filter(a => a.service_type === 'urgent').length > 0 && (
                       <div className="mb-2 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <TriangleAlert className="h-4 w-4 text-rose-400 animate-pulse" />
+                          <TriangleAlert className="h-4 w-4 text-rose-400 motion-safe:animate-pulse" />
                           <span className="text-xs font-bold uppercase tracking-[0.2em] text-rose-300">🚨 حالات عاجلة</span>
                           <span className="mr-auto rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-200">{sortedByStatus.filter(a => a.service_type === 'urgent').length}</span>
                         </div>
                         <div className="space-y-2">
                           {sortedByStatus.filter(a => a.service_type === 'urgent').map((appointment) => (
-                            <div key={appointment.id} className="rounded-xl border border-rose-400/40 bg-rose-500/[0.08] animate-pulse p-3 shadow-[0_0_15px_rgba(244,63,94,0.12)]">
+                            <div key={appointment.id} className="rounded-xl border border-rose-400/40 bg-rose-500/[0.08] p-3 shadow-[0_0_15px_rgba(244,63,94,0.12)]">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <TriangleAlert className="h-4 w-4 shrink-0 text-rose-300" />
