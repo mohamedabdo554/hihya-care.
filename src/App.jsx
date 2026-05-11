@@ -4163,6 +4163,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   const [homeVisitAddress, setHomeVisitAddress] = useState('')
   const [homeVisitLocationLink, setHomeVisitLocationLink] = useState('')
   const [isLocating, setIsLocating] = useState(false)
+  const [locationError, setLocationError] = useState(null)
   const [appointmentDate, setAppointmentDate] = useState(() => {
     if (!slotParam) {
       return toDatetimeLocalValue(new Date())
@@ -4198,6 +4199,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
   const handleServiceTypeChange = useCallback((type) => {
     setBookingServiceType(type)
+    setLocationError(null)
     try { sessionStorage.setItem('hihya-service-type', type) } catch {}
   }, [])
 
@@ -4617,11 +4619,21 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
                           const link = `https://www.google.com/maps?q=${lat},${lng}`
                           setHomeVisitLocationLink(link)
                           setIsLocating(false)
+                          setLocationError(null)
                           setToast({ title: ui.language === 'ar' ? 'تم' : 'Done', message: ui.language === 'ar' ? '✅ تم الحصول على الموقع بنجاح' : '✅ Location obtained successfully', tone: 'success' })
                         },
-                        () => {
+                        (err) => {
                           setIsLocating(false)
-                          setToast({ title: ui.language === 'ar' ? 'خطأ' : 'Error', message: ui.language === 'ar' ? '❌ تعذر الحصول على الموقع — تأكد من تفعيل GPS واذن الموقع' : '❌ Could not get location — enable GPS and location permission', tone: 'error' })
+                          if (err.code === 1) {
+                            setLocationError('permission')
+                            setToast({ title: ui.language === 'ar' ? 'إذن الموقع' : 'Location permission', message: ui.language === 'ar' ? '⚠️ تم رفض إذن الموقع — الرجاء السماح بالوصول للموقع من إعدادات المتصفح' : '⚠️ Location permission denied — please allow location access in browser settings', tone: 'error' })
+                          } else if (err.code === 2) {
+                            setLocationError('disabled')
+                            setToast({ title: ui.language === 'ar' ? 'GPS غير مفعل' : 'GPS disabled', message: ui.language === 'ar' ? '❌ GPS غير مفعل — يرجى تشغيل تحديد الموقع من الإعدادات' : '❌ GPS is off — please enable location services in settings', tone: 'error' })
+                          } else {
+                            setLocationError('timeout')
+                            setToast({ title: ui.language === 'ar' ? 'انتهت المهلة' : 'Timeout', message: ui.language === 'ar' ? '❌ لم يتم الحصول على الموقع — حاول مرة أخرى أو اكتب العنوان يدوياً' : '❌ Could not get location — try again or enter address manually', tone: 'error' })
+                          }
                         },
                         { enableHighAccuracy: true, timeout: 15000 },
                       )
@@ -4641,6 +4653,49 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
                       </>
                     )}
                   </button>
+
+                  {/* Location Error — Help user fix it */}
+                  {locationError ? (
+                    <div className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-3">
+                      <p className="text-xs font-semibold text-rose-600 dark:text-rose-300">
+                        {ui.language === 'ar' ? '📍 تفعيل الموقع' : '📍 Enable location'}
+                      </p>
+                      <p className="mt-1 text-[11px] text-rose-600/80 dark:text-rose-300/80">
+                        {locationError === 'permission'
+                          ? (ui.language === 'ar'
+                              ? 'الرجاء السماح للموقع بالوصول إلى موقعك:'
+                              : 'Please allow the site to access your location:')
+                          : (ui.language === 'ar'
+                              ? 'يرجى تفعيل GPS من الإعدادات:'
+                              : 'Please enable GPS in settings:')}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // iOS: try App-Prefs, Android: try settings intent
+                            window.open('App-Prefs:root=Privacy&path=LOCATION', '_blank')
+                            window.open('intent://settings/#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end', '_blank')
+                          }}
+                          className="rounded-lg border border-rose-300/30 bg-rose-500/15 px-3 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-500/25 dark:text-rose-300"
+                        >
+                          ⚙️ {ui.language === 'ar' ? 'فتح الإعدادات' : 'Open Settings'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLocationError(null)}
+                          className="rounded-lg border border-slate-300/30 bg-slate-500/10 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-500/20 dark:text-slate-300"
+                        >
+                          {ui.language === 'ar' ? 'تجاهل' : 'Dismiss'}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[10px] text-rose-500/70 dark:text-rose-300/70">
+                        {ui.language === 'ar'
+                          ? '💡 الإعدادات > الخصوصية > خدمات الموقع > تفعيل للمتصفح'
+                          : '💡 Settings > Privacy > Location Services > Enable for browser'}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {/* Show maps link if shared */}
                   {homeVisitLocationLink ? (
