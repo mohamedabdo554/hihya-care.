@@ -2251,17 +2251,47 @@ function AppShell({ children, ui }) {
 
           {/* Mobile menu panel */}
           {mobileMenuOpen && (
-            <div className="mt-3 border-t border-white/10 pt-3 sm:hidden">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('language')}</span>
-                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
-                  <button onClick={() => setLanguage('en')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${language === 'en' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>EN</button>
-                  <button onClick={() => setLanguage('ar')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${language === 'ar' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>AR</button>
-                </div>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
-                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
-                  <button onClick={() => setTheme('light')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${theme === 'light' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>{t('light')}</button>
-                  <button onClick={() => setTheme('dark')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${theme === 'dark' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>{t('dark')}</button>
+            <div className="mt-3 space-y-2 border-t border-white/10 pt-3 sm:hidden">
+              {/* Dashboard */}
+              <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5">
+                <svg className="h-5 w-5 shrink-0 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                {isArabic ? 'لوحة التحكم' : 'Dashboard'}
+              </Link>
+              {/* AI Assistant */}
+              <Link to="/ai-triage" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5">
+                <svg className="h-5 w-5 shrink-0 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                {isArabic ? 'المساعد الذكي' : 'AI Assistant'}
+              </Link>
+              {/* Section Toggle */}
+              <button
+                type="button"
+                onClick={() => { setSection(section === 'veterinary' ? 'human' : 'veterinary'); setMobileMenuOpen(false) }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                  section === 'veterinary'
+                    ? 'text-emerald-600 dark:text-emerald-200'
+                    : 'text-slate-700 dark:text-slate-200'
+                }`}
+              >
+                {section === 'veterinary' ? (
+                  <Stethoscope className="h-5 w-5 shrink-0 text-emerald-500" />
+                ) : (
+                  <PawPrint className="h-5 w-5 shrink-0 text-blue-500" />
+                )}
+                <span>{section === 'veterinary' ? (isArabic ? 'بشري' : 'Human') : (isArabic ? 'بيطري' : 'Vet')}</span>
+              </button>
+              {/* Divider */}
+              <div className="border-t border-white/10 pt-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('language')}</span>
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
+                    <button onClick={() => setLanguage('en')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${language === 'en' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>EN</button>
+                    <button onClick={() => setLanguage('ar')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${language === 'ar' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>AR</button>
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('theme')}</span>
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 dark:border-white/10 dark:bg-slate-950/60">
+                    <button onClick={() => setTheme('light')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${theme === 'light' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>{t('light')}</button>
+                    <button onClick={() => setTheme('dark')} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${theme === 'dark' ? 'bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>{t('dark')}</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3305,14 +3335,24 @@ function DoctorProfilePage({ loading, notice, ui }) {
   return (
     <AppShell ui={ui}>
       <div className="space-y-6">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-100"
-        >
-          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
-          {t('backToDoctors')}
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-100"
+          >
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
+            {t('backToDoctors')}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/book/${doctor.id}`)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_8px_30px_rgba(34,211,238,0.3)] transition hover:-translate-y-0.5 active:scale-[0.97]"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            {ui.language === 'ar' ? 'احجز الآن' : 'Book Now'}
+          </button>
+        </div>
 
         <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/90">
           <img
