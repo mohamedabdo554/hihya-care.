@@ -456,6 +456,7 @@ const fallbackDoctors = [
     bio_ar: 'استشاري جراحة ومناظير المسالك البولية والكلى وأمراض الذكورة والبروستاتا وعقم الرجال.',
     price: 'استشارة حسب الكشف',
     price_value: 120,
+    base_price: 120,
     clinicLocation: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
     clinicLocation_en: 'Near the old National Bank, next to Dr. Gomaa Pharmacy',
     clinicLocation_ar: 'عند البنك الأهلي القديم، بجوار صيدلية د. جمعة',
@@ -474,6 +475,7 @@ const fallbackDoctors = [
     bio: '14 سنة في رعاية القلب المتقدمة.',
     price: '90 دولار استشارة',
     price_value: 90,
+    base_price: 90,
     phone_number: '+201001112233',
     secret_code: 'HC-9017',
   },
@@ -488,6 +490,7 @@ const fallbackDoctors = [
     bio: '11 سنة في تشخيص أمراض الأعصاب.',
     price: '110 دولار استشارة',
     price_value: 110,
+    base_price: 110,
     phone_number: '+201002223344',
     secret_code: 'HC-1142',
   },
@@ -502,7 +505,9 @@ const fallbackDoctors = [
     bio: '9 سنوات في رعاية الأطفال.',
     price: '75 دولار استشارة',
     price_value: 75,
+    base_price: 75,
     phone_number: '+201003334455',
+    tele_consultation: true,
     secret_code: 'HC-2608',
   },
   {
@@ -516,6 +521,7 @@ const fallbackDoctors = [
     bio: '16 سنة في استعادة الحركة والعظام.',
     price: '120 دولار استشارة',
     price_value: 120,
+    base_price: 120,
     phone_number: '+201004445566',
     secret_code: 'HC-7784',
   },
@@ -536,6 +542,7 @@ const fallbackDoctors = [
     bio_ar: 'عيادة مرواد للجلدية والتجميل والليزر في ههيا.',
     price: 'استشارة حسب الكشف',
     price_value: 80,
+    base_price: 80,
     clinicLocation: 'ههيا، شارع الجمهورية، أعلى صيدلية الضريبي',
     clinicLocation_en: 'El-Gomhoreya St, above El-Dariby Pharmacy, Hehya',
     clinicLocation_ar: 'ههيا، شارع الجمهورية، أعلى صيدلية الضريبي',
@@ -560,6 +567,7 @@ const fallbackDoctors = [
     bio_ar: 'متخصص في الجلدية والعناية بالبشرة.',
     price: 'استشارة حسب الكشف',
     price_value: 60,
+    base_price: 60,
     clinicLocation: 'El-Gomhoreya St, Hehya (MHFQ+C7M)',
     clinicLocation_en: 'El-Gomhoreya St, Hehya (MHFQ+C7M)',
     clinicLocation_ar: 'شارع الجمهورية، ههيا (MHFQ+C7M)',
@@ -584,11 +592,13 @@ const fallbackDoctors = [
     bio_ar: 'خبرة في أمراض الصدر والجهاز التنفسي.',
     price: 'استشارة حسب الكشف',
     price_value: 70,
+    base_price: 70,
     clinicLocation: 'عيادة أمراض صدرية - ههيا',
     clinicLocation_en: 'Chest Diseases Clinic - Hehya',
     clinicLocation_ar: 'عيادة أمراض صدرية - ههيا',
     clinic_link: 'https://maps.app.goo.gl/u5AGRUgwBN8dfWoZ8',
     phone_number: '+201000000003',
+    tele_consultation: true,
     secret_code: 'HC-4407',
   },
   {
@@ -608,6 +618,7 @@ const fallbackDoctors = [
     bio_ar: 'استشاري أول القلب والقسطرة - جامعة الزقازيق.',
     price: 'استشارة حسب الكشف',
     price_value: 150,
+    base_price: 150,
     clinicLocation: 'عيادة القلب والقسطرة - ههيا',
     clinicLocation_en: 'Cardiology & Cath Clinic - Hehya',
     clinicLocation_ar: 'عيادة القلب والقسطرة - ههيا',
@@ -632,11 +643,13 @@ const fallbackDoctors = [
     bio_ar: 'عيادة للجلدية والتناسلية والتجميل.',
     price: 'استشارة حسب الكشف',
     price_value: 90,
+    base_price: 90,
     clinicLocation: 'عيادة الجلدية والتجميل - ههيا',
     clinicLocation_en: 'Dermatology & Cosmetic Clinic - Hehya',
     clinicLocation_ar: 'عيادة الجلدية والتجميل - ههيا',
     clinic_link: 'https://maps.app.goo.gl/pUS1XXoEm4QsKpnTA',
     phone_number: '+201000000005',
+    tele_consultation: true,
     secret_code: 'HC-6024',
   },
   {
@@ -656,6 +669,7 @@ const fallbackDoctors = [
     bio_ar: 'عيادة عظام بجوار صيدلية السلام وحلويات شروق.',
     price: 'استشارة حسب الكشف',
     price_value: 85,
+    base_price: 85,
     clinicLocation: 'Ahmed Oraby St, Hehya - بجوار صيدلية السلام',
     clinicLocation_en: 'Ahmed Oraby St, near El Salam Pharmacy',
     clinicLocation_ar: 'شارع أحمد عرابي، بجوار صيدلية السلام',
@@ -680,11 +694,14 @@ const fallbackDoctors = [
     bio_ar: 'عيادة بجوار البوسطة القديمة أمام محطة القطار.',
     price: 'استشارة حسب الكشف',
     price_value: 70,
+    base_price: 70,
     clinicLocation: 'شارع عمر بن الخطاب، بجوار البوسطة القديمة',
     clinicLocation_en: 'Omar Ibn El-Khattab St, near the old post office',
     clinicLocation_ar: 'شارع عمر بن الخطاب، بجوار البوسطة القديمة',
     clinic_link: 'https://maps.app.goo.gl/93n78fzvK2kn9RJf7',
     phone_number: '+201000000007',
+    tele_consultation: true,
+    home_visit: true,
     secret_code: 'HC-4059',
   },
   {
@@ -704,11 +721,13 @@ const fallbackDoctors = [
     bio_ar: 'فرع ههيا - استشاري باطنة.',
     price: 'استشارة حسب الكشف',
     price_value: 130,
+    base_price: 130,
     clinicLocation: 'عيادة باطنة - ههيا',
     clinicLocation_en: 'Internal Medicine Clinic - Hehya',
     clinicLocation_ar: 'عيادة باطنة - ههيا',
     clinic_link: 'https://maps.app.goo.gl/9wgUonjix6pBc7PR9',
     phone_number: '+201000000008',
+    home_visit: true,
     secret_code: 'HC-5526',
   },
   {
@@ -728,6 +747,7 @@ const fallbackDoctors = [
     bio_ar: 'مركز أشعة تشخيصية وخدمات تصوير طبي.',
     price: 'استشارة حسب الكشف',
     price_value: 95,
+    base_price: 95,
     clinicLocation: 'مركز أشعة - ههيا',
     clinicLocation_en: 'Radiology Center - Hehya',
     clinicLocation_ar: 'مركز أشعة - ههيا',
@@ -755,6 +775,7 @@ const fallbackDoctors = [
     bio_ar: 'عيادة بيطرية متخصصة في علاج القطط والكلاب فقط. تضم فريقاً من 2 أطباء: جراحة وباطنة.',
     price: 'الكشف 80 ج - التطعیمات حسب النوع',
     price_value: 80,
+    base_price: 80,
     clinicLocation: 'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
     clinicLocation_en: 'Madafet El-Markaz St, behind the registry, second left',
     clinicLocation_ar: 'شارع مضیفة المركز، خلف السجل، داخل الشارع تاني شمال',
@@ -1235,6 +1256,7 @@ function makeDoctorFromRow(row) {
     gender: row.gender ?? null,
     availability: Array.isArray(row.availability) ? row.availability : row.availability ? [row.availability] : null,
     price_value: row.price_value ?? null,
+    base_price: row.base_price != null ? Number(row.base_price) : (row.price_value != null ? Number(row.price_value) : 100),
     image_url: row.image_url ?? null,
     bio: row.bio ?? null,
     bio_en: row.bio_en ?? null,
@@ -1251,6 +1273,7 @@ function makeDoctorFromRow(row) {
     payment_method: row.payment_method ?? null,
     payment_method_en: row.payment_method_en ?? null,
     tele_consultation: Boolean(row.tele_consultation),
+    home_visit: Boolean(row.home_visit),
     next_available_slot: row.next_available_slot ?? null,
     rating: row.rating != null ? Number(row.rating) : null,
     reviews_count: row.reviews_count != null ? Number(row.reviews_count) : null,
@@ -1263,6 +1286,59 @@ function makeDoctorFromRow(row) {
     payment_method: row.payment_method || null,
     rescue_discount: row.rescue_discount || null,
   }
+}
+
+function getServicePrices(basePrice) {
+  const bp = Number(basePrice) || 100
+  return [
+    {
+      id: 'clinic-visit',
+      price: bp,
+      originalPrice: bp,
+      labelAr: 'كشف عيادة',
+      labelEn: 'Clinic Visit',
+      icon: '🩺',
+      multiplier: 1,
+      color: 'text-cyan-600 dark:text-cyan-300',
+      bgColor: 'bg-cyan-500/10 border-cyan-400/30',
+    },
+    {
+      id: 'tele-consultation',
+      price: Math.round(bp * 0.7),
+      originalPrice: bp,
+      labelAr: 'استشارة هاتفية',
+      labelEn: 'Phone Consultation',
+      icon: '📞',
+      multiplier: 0.7,
+      discount: '30%',
+      color: 'text-emerald-600 dark:text-emerald-300',
+      bgColor: 'bg-emerald-500/10 border-emerald-400/30',
+    },
+    {
+      id: 'urgent-care',
+      price: Math.round(bp * 1.5),
+      originalPrice: bp,
+      labelAr: 'كشف عاجل',
+      labelEn: 'Urgent Care',
+      icon: '⚡',
+      multiplier: 1.5,
+      badge: 'رسوم أولوية',
+      color: 'text-amber-600 dark:text-amber-200',
+      bgColor: 'bg-amber-500/10 border-amber-400/30',
+    },
+    {
+      id: 'home-visit',
+      price: Math.round(bp * 2.5),
+      originalPrice: bp,
+      labelAr: 'زيارة منزلية',
+      labelEn: 'Home Visit',
+      icon: '🏠',
+      multiplier: 2.5,
+      badge: 'زيارة منزلية',
+      color: 'text-rose-600 dark:text-rose-200',
+      bgColor: 'bg-rose-500/10 border-rose-400/30',
+    },
+  ]
 }
 
 function localizeDoctor(language, doctor) {
@@ -2350,6 +2426,16 @@ const DoctorCard = memo(function DoctorCard({ doctor, index, ui }) {
       </div>
 
       <div className="relative z-[2] mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.25em] text-slate-400">
+        {doctor.tele_consultation ? (
+          <span className="rounded-full border border-purple-300/40 bg-purple-100/70 px-2.5 py-1 font-semibold text-purple-800 dark:border-purple-400/30 dark:bg-purple-500/20 dark:text-purple-200">
+            {ui.language === 'ar' ? 'استشارة هاتفية' : 'Telemedicine'}
+          </span>
+        ) : null}
+        {doctor.home_visit ? (
+          <span className="rounded-full border border-amber-300/40 bg-amber-100/70 px-2.5 py-1 font-semibold text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/20 dark:text-amber-200">
+            {ui.language === 'ar' ? 'زيارة منزلية' : 'Home Visit'}
+          </span>
+        ) : null}
         <span className="rounded-full border border-white/40 bg-white/70 px-2.5 py-1 font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
           {localizedDoctor.price}
         </span>
@@ -2440,6 +2526,16 @@ function HomePage({ doctors, loading, notice, ui }) {
   const [availabilityFilter, setAvailabilityFilter] = useState('all')
   const [priceFilter, setPriceFilter] = useState('all')
   const [clinicStatusNonce, setClinicStatusNonce] = useState(0)
+  const [bookingType, setBookingType] = useState(null)
+  const doctorsRef = useRef(null)
+
+  const handleBookingTypeSelect = useCallback((type) => {
+    setBookingType((prev) => (prev === type ? null : type))
+    try { sessionStorage.setItem('hihya-service-type', type) } catch {}
+    setTimeout(() => {
+      doctorsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }, [])
 
   useEffect(() => {
     const handler = () => setClinicStatusNonce(n => n + 1)
@@ -2493,7 +2589,7 @@ function HomePage({ doctors, loading, notice, ui }) {
 
       return matchesSearch && matchesSpecialty && matchesGender && matchesAvailability && matchesPrice
     })
-  }, [doctors, searchTerm, selectedSpecialty, genderFilter, availabilityFilter, priceFilter, clinicStatusNonce])
+  }, [doctors, searchTerm, selectedSpecialty, genderFilter, availabilityFilter, priceFilter, clinicStatusNonce, bookingType])
 
   const localizedDoctors = useMemo(
     () => filteredDoctors.map(doctor => localizeDoctor(ui.language, doctor)),
@@ -2507,7 +2603,82 @@ function HomePage({ doctors, loading, notice, ui }) {
 
   return (
     <AppShell ui={ui}>
-      <section className="animate-[fadeIn_0.6s_ease-out]">
+      {/* Triple Hero Cards — Service Selection */}
+      <div className="mb-8 rounded-3xl p-6">
+        <div className="mb-6 text-center">
+          <p className="text-xs uppercase tracking-[0.45em] text-cyan-200/70">Our Services</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-white">
+            {isArabic ? 'اختر نوع الخدمة' : 'Choose Service Type'}
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            {isArabic ? 'استشارة هاتفية، كشف عيادة، أو زيارة منزلية — احجز ما يناسبك' : 'Phone consult, clinic visit, or home visit'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3" dir={isArabic ? 'rtl' : 'ltr'}>
+          {/* Tele-consultation */}
+          <button
+            type="button"
+            onClick={() => handleBookingTypeSelect('tele-consultation')}
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 ${
+              bookingType === 'tele-consultation' ? 'border-purple-400/60 shadow-lg shadow-purple-500/30' : 'border-purple-500/30'
+            }`}
+            style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(168,85,247,0.2), rgba(217,70,239,0.15))' }}
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-purple-500/15 text-3xl shadow-inner backdrop-blur-xl">
+              📞
+            </div>
+            <h3 className="mb-1 text-lg font-bold text-white">{isArabic ? 'استشارة هاتفية' : 'Phone Consultation'}</h3>
+            <p className="text-sm text-slate-400">{isArabic ? 'تحدث مع طبيبك الآن من منزلك' : 'Talk to your doctor from home'}</p>
+            <div className="mt-4 w-full rounded-xl border border-purple-400/30 bg-purple-600/80 py-2.5 text-center text-sm font-bold text-white transition group-hover:bg-purple-500">
+              {isArabic ? 'احجز استشارتك' : 'Book Consultation'}
+            </div>
+          </button>
+
+          {/* Clinic Visit */}
+          <button
+            type="button"
+            onClick={() => handleBookingTypeSelect('clinic-visit')}
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 ${
+              bookingType === 'clinic-visit' ? 'border-blue-400/60 shadow-lg shadow-blue-500/30' : 'border-blue-400/30'
+            }`}
+            style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.25), rgba(37,99,235,0.2), rgba(8,145,178,0.15))' }}
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-blue-500/15 text-3xl shadow-inner backdrop-blur-xl">
+              🩺
+            </div>
+            <h3 className="mb-1 text-lg font-bold text-white">{isArabic ? 'كشف العيادة' : 'Clinic Visit'}</h3>
+            <p className="text-sm text-slate-400">{isArabic ? 'احجز موعدك التقليدي في العيادة' : 'Book your regular clinic visit'}</p>
+            <div className="mt-4 w-full rounded-xl border border-blue-400/30 bg-blue-600/80 py-2.5 text-center text-sm font-bold text-white transition group-hover:bg-blue-500">
+              {isArabic ? 'احجز موعدك' : 'Book Appointment'}
+            </div>
+          </button>
+
+          {/* Urgent Care */}
+          <button
+            type="button"
+            onClick={() => handleBookingTypeSelect('urgent-care')}
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 text-right backdrop-blur-2xl transition-all duration-200 hover:-translate-y-1 ${
+              bookingType === 'urgent-care' ? 'border-amber-400/60 shadow-lg shadow-amber-500/30' : 'border-amber-500/30'
+            }`}
+            style={{ background: 'linear-gradient(135deg, #020617, #030712, #09090b)' }}
+          >
+            <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 rounded-b-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-1 text-xs font-bold text-white shadow-lg">
+              {isArabic ? 'الأكثر طلباً ⭐' : 'Most Popular ⭐'}
+            </div>
+            <div className="mx-auto mb-4 mt-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-amber-500/20 text-3xl shadow-inner backdrop-blur-xl">
+              ⚡
+            </div>
+            <h3 className="mb-1 text-lg font-bold text-amber-200">{isArabic ? 'زيارة منزلية فورية' : 'Urgent Home Visit'}</h3>
+            <p className="text-sm text-slate-400">{isArabic ? 'اطلب طبيب للمنزل فوراً للحالات الطارئة' : 'Request an immediate home visit for emergencies'}</p>
+            <div className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 py-2.5 text-center text-sm font-bold text-white shadow-lg shadow-amber-500/30">
+              {isArabic ? 'اطلب زيارة منزلية' : 'Request Home Visit'}
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <section ref={doctorsRef} className="animate-[fadeIn_0.6s_ease-out]">
         {activeSection === 'veterinary' ? (
           <>
             {/* Veterinary Mode Header */}
@@ -2745,10 +2916,31 @@ function HomePage({ doctors, loading, notice, ui }) {
                     <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
                       {isArabic ? 'نتائج البحث' : 'Results'}
                     </p>
-                    <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-                      {isArabic ? `عدد النتائج: ${localizedDoctors.length}` : `Results: ${localizedDoctors.length}`}
+                    <div className="flex items-center gap-2">
+                      {bookingType ? (
+                        <button
+                          type="button"
+                          onClick={() => setBookingType(null)}
+                          className="rounded-full border border-rose-300/40 bg-rose-500/10 px-3 py-1 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-500/20 dark:text-rose-300"
+                        >
+                          {isArabic ? 'إلغاء الفلتر' : 'Clear filter'} ✕
+                        </button>
+                      ) : null}
+                      <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                        {isArabic ? `عدد النتائج: ${localizedDoctors.length}` : `Results: ${localizedDoctors.length}`}
+                      </div>
                     </div>
                   </div>
+
+                  {bookingType && localizedDoctors.length ? (
+                    <div className="mb-4 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-700 dark:text-cyan-200">
+                      {bookingType === 'tele-consultation'
+                        ? (isArabic ? '🩺 عرض الأطباء المتاحين للاستشارة الهاتفية' : '🩺 Showing doctors available for phone consultation')
+                        : bookingType === 'urgent-care'
+                          ? (isArabic ? '🚨 عرض الأطباء المتاحين للزيارة المنزلية العاجلة' : '🚨 Showing doctors available for urgent home visit')
+                          : (isArabic ? '🏥 عرض جميع الأطباء المتاحين للكشف في العيادة' : '🏥 Showing all doctors for clinic visit')}
+                    </div>
+                  ) : null}
 
                   {localizedDoctors.length ? (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -2758,7 +2950,11 @@ function HomePage({ doctors, loading, notice, ui }) {
                     </div>
                   ) : (
                     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                      {isArabic ? 'لا توجد نتائج مطابقة للفلترة الحالية.' : 'No results match the current filters.'}
+                      {bookingType === 'tele-consultation'
+                        ? (isArabic ? '📞 لا يتوفر أطباء للاستشارة الهاتفية حالياً — جرّب خدمة أخرى أو تابع لاحقاً' : '📞 No doctors available for phone consultation right now — try another service or check back later')
+                        : bookingType === 'urgent-care'
+                          ? (isArabic ? '🚨 لا يتوفر أطباء للزيارات المنزلية العاجلة حالياً — اتصل على الطوارئ أو جرّب خدمة أخرى' : '🚨 No doctors available for urgent home visits right now — contact emergency or try another service')
+                          : (isArabic ? 'لا توجد نتائج مطابقة للفلترة الحالية.' : 'No results match the current filters.')}
                     </div>
                   )}
                 </div>
@@ -3277,8 +3473,24 @@ function DoctorProfilePage({ loading, notice, ui }) {
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-white/5">
               <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">{t('profileSignal')}</p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t('consultationFee')}</p>
-              <p className="mt-1 text-3xl font-semibold text-emerald-700 dark:text-emerald-100">{doctor.price}</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{ui.language === 'ar' ? 'باقات الأسعار' : 'Pricing plans'}</p>
+              <div className="mt-3 space-y-2">
+                {getServicePrices(doctor.base_price).map(s => (
+                  <div key={s.id} className={`flex items-center justify-between rounded-xl border px-3 py-2 ${s.bgColor}`}>
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-200">
+                      <span>{s.icon}</span>
+                      <span>{ui.language === 'ar' ? s.labelAr : s.labelEn}</span>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {s.discount && (
+                        <span className="text-[10px] text-slate-400 line-through">{s.originalPrice} {ui.language === 'ar' ? 'ج.م' : 'EGP'}</span>
+                      )}
+                      <span className={`text-sm font-bold ${s.color}`}>{s.price} <span className="text-[9px]">{ui.language === 'ar' ? 'ج.م' : 'EGP'}</span></span>
+                      {s.discount && <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[8px] font-bold text-white">-{s.discount}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">{ui.language === 'ar' ? 'طريقة الدفع' : 'Payment'}</p>
               <p className="mt-1 text-base font-medium text-slate-900 dark:text-white">{paymentAside}</p>
               <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">{t('clinicLocation')}</p>
@@ -3948,6 +4160,9 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   const [intakeData, setIntakeData] = useState({ age: '', gender: '', symptoms: '' })
   const [petType, setPetType] = useState('')
   const [ownerName, setOwnerName] = useState('')
+  const [homeVisitAddress, setHomeVisitAddress] = useState('')
+  const [homeVisitLocationLink, setHomeVisitLocationLink] = useState('')
+  const [isLocating, setIsLocating] = useState(false)
   const [appointmentDate, setAppointmentDate] = useState(() => {
     if (!slotParam) {
       return toDatetimeLocalValue(new Date())
@@ -3964,17 +4179,40 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
   const [feedback, setFeedback] = useState('')
   const [toast, setToast] = useState(null)
   const [session, setSession] = useState(null)
+  const [bookingServiceType, setBookingServiceType] = useState(() => {
+    try { const st = sessionStorage.getItem('hihya-service-type'); if (st === 'tele-consultation' || st === 'urgent-care' || st === 'clinic-visit' || st === 'home-visit') return st } catch {}
+    return 'clinic-visit'
+  })
+  const [waConfirmed, setWaConfirmed] = useState(false)
+  const [bookingData, setBookingData] = useState(null)
 
   const doctor = doctorId ? doctorLookup.get(doctorId) : null
   const selectedDoctor = doctor ? localizeDoctor(ui.language, doctor) : (doctorId ? localizeDoctor(ui.language, createFallbackDoctor(doctorId)) : null)
   const isVet = selectedDoctor?.category === 'veterinary'
 
+  const servicePrices = useMemo(() => getServicePrices(selectedDoctor?.base_price), [selectedDoctor?.base_price])
+  const serviceTypePrice = useMemo(() => {
+    const found = servicePrices.find(s => s.id === bookingServiceType)
+    return found || servicePrices[0]
+  }, [bookingServiceType, servicePrices])
+
+  const handleServiceTypeChange = useCallback((type) => {
+    setBookingServiceType(type)
+    try { sessionStorage.setItem('hihya-service-type', type) } catch {}
+  }, [])
+
+  const bookingServiceTypeToDb = bookingServiceType === 'tele-consultation' ? 'phone' : bookingServiceType === 'urgent-care' || bookingServiceType === 'home-visit' ? 'urgent' : 'normal'
+
+  const isHomeVisit = bookingServiceType === 'home-visit'
+  const trimmedAddr = homeVisitAddress.trim()
+  const homeAddrLine = isHomeVisit && trimmedAddr ? `📍 العنوان: ${trimmedAddr}\n` : ''
+  const homeMapLine = isHomeVisit && homeVisitLocationLink ? `🗺️ الرابط: ${homeVisitLocationLink}\n` : ''
+  const whatsappMessage = isVet
+    ? `مرحباً Hihya Care 👋\nلقد حجزت موعداً للكشف البيطري مع ${selectedDoctor?.name}\nنوع الخدمة: ${ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}\nالسعر: ${serviceTypePrice.price} ج.م\n${homeAddrLine}${homeMapLine}التاريخ: ${appointmentDate}\nالاسم: ${patientName}\nالرجاء تأكيد الحجز`
+    : `مرحباً Hihya Care 👋\nلقد حجزت موعداً مع ${selectedDoctor?.name}\nنوع الخدمة: ${ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}\nالسعر: ${serviceTypePrice.price} ج.م\n${homeAddrLine}${homeMapLine}التاريخ: ${appointmentDate}\nالاسم: ${patientName}\nالرجاء تأكيد الحجز`
+
   const whatsappLink = selectedDoctor?.phone_number
-    ? `https://wa.me/${normalizePhoneForWa(selectedDoctor.phone_number)}?text=${encodeURIComponent(
-        isVet
-          ? `Hello Hihya Care, I just booked a vet appointment with ${selectedDoctor.name} via the platform.`
-          : `Hello Hihya Care, I just booked an appointment with ${selectedDoctor.name} via the platform.`,
-      )}`
+    ? `https://wa.me/${normalizePhoneForWa(selectedDoctor.phone_number)}?text=${encodeURIComponent(whatsappMessage)}`
     : ''
 
   useEffect(() => {
@@ -4040,6 +4278,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
     const trimmedOwner = isVet ? ownerName.trim() : ''
     const petTypeLabel = isVet && petType ? (petType === 'cat' ? (ui.language === 'ar' ? 'قطة' : 'Cat') : (ui.language === 'ar' ? 'كلب' : 'Dog')) : ''
 
+    const trimmedAddress = homeVisitAddress.trim()
     const nameForDisplay = isVet && trimmedOwner ? trimmedOwner : trimmedName
     const nameRequired = isVet ? (!trimmedName || !trimmedPhone || !trimmedAppointmentDate) : (!trimmedName || !trimmedPhone || !trimmedAppointmentDate)
 
@@ -4050,6 +4289,13 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
           ? (isVet ? 'يرجى إدخال اسم الحيوان ورقم الهاتف وتاريخ الموعد.' : 'يرجى إدخال اسم المريض ورقم الهاتف وتاريخ الموعد.')
           : 'Please enter the patient name, phone number, and appointment date.',
       )
+      return
+    }
+
+    const isHomeVisit = bookingServiceType === 'home-visit'
+    if (isHomeVisit && !trimmedAddress) {
+      setStatus('error')
+      setFeedback(ui.language === 'ar' ? 'يرجى إدخال عنوان الزيارة المنزلية.' : 'Please enter the home visit address.')
       return
     }
 
@@ -4092,6 +4338,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
       const symptomsParts = [
         intakeData.age ? `العمر: ${intakeData.age}` : '',
         intakeData.gender ? `النوع: ${intakeData.gender}` : '',
+        isHomeVisit && trimmedAddress ? `📍 العنوان: ${trimmedAddress}` : '',
         trimmedSymptoms,
         attachmentNames.length ? `📎 ${attachmentNames.join(', ')}` : '',
       ]
@@ -4112,6 +4359,7 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         appointment_time: appointmentTime,
         status: 'Pending',
         symptoms: symptomsParts.filter(Boolean).join('\n') || null,
+        service_type: bookingServiceTypeToDb,
       }
       if (isVet) {
         supabasePayload.pet_name = trimmedName
@@ -4146,7 +4394,8 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
         patient_name: trimmedName,
         patient_phone: trimmedPhone,
         appointment_date: appointmentIso,
-        message: `New booking from ${trimmedName} for ${selectedDoctor.name}`,
+        service_type: bookingServiceTypeToDb,
+        message: `New ${bookingServiceTypeToDb} booking from ${trimmedName} for ${selectedDoctor.name}`,
       })
       const signal =
         typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
@@ -4160,25 +4409,37 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
       }).catch(() => {})
     }
 
-    navigate('/booking-success', {
-      state: {
-        patientName: patientNameForDb,
-        patientPhone: trimmedPhone,
-        appointmentIso,
-        doctorId,
-        doctorName: selectedDoctor.name,
-        specialty: selectedDoctor.specialty,
-        clinicAddress: selectedDoctor.clinicLocation || '',
-        clinicPhone: selectedDoctor.phone_number || '',
-        mapsUrl: selectedDoctor.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
-        bookingRef: `HC-${Date.now().toString(36).toUpperCase()}`,
-        ...(isVet ? { petName: trimmedName, petType: petTypeLabel } : {}),
-      },
-    })
+    const navPayload = {
+      patientName: patientNameForDb,
+      patientPhone: trimmedPhone,
+      appointmentIso,
+      doctorId,
+      doctorName: selectedDoctor.name,
+      specialty: selectedDoctor.specialty,
+      clinicAddress: selectedDoctor.clinicLocation || '',
+      clinicPhone: selectedDoctor.phone_number || '',
+      mapsUrl: selectedDoctor.clinic_link || 'https://maps.app.goo.gl/hCyijNgYe1inGouk9',
+      bookingRef: `HC-${Date.now().toString(36).toUpperCase()}`,
+      serviceType: bookingServiceTypeToDb,
+      servicePrice: serviceTypePrice.price,
+      ...(isHomeVisit && trimmedAddress ? { homeAddress: trimmedAddress } : {}),
+      ...(isHomeVisit && homeVisitLocationLink ? { homeAddressLink: homeVisitLocationLink } : {}),
+      ...(isVet ? { petName: trimmedName, petType: petTypeLabel } : {}),
+    }
+
+    // Phone/urgent bookings require mandatory WhatsApp confirmation first
+    if (bookingServiceTypeToDb === 'phone' || bookingServiceTypeToDb === 'urgent') {
+      setBookingData(navPayload)
+      setStatus('wa-pending')
+      setFeedback(ui.language === 'ar' ? '📲 يرجى تأكيد الحجز عبر واتساب' : '📲 Please confirm booking via WhatsApp')
+    } else {
+      navigate('/booking-success', { state: navPayload })
+    }
   }
 
   const isLoading = status === 'loading'
   const isSuccess = status === 'success'
+  const isWaPending = status === 'wa-pending'
 
   return (
     <AppShell ui={ui}>
@@ -4254,6 +4515,162 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
             </div>
 
             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+              {/* Service Type Selector */}
+              <div className="rounded-2xl border border-cyan-300/20 bg-white/80 p-4 dark:bg-slate-950/60">
+                <p className="mb-3 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">
+                  {ui.language === 'ar' ? 'اختر نوع الخدمة' : 'Choose service type'}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {servicePrices.map(opt => {
+                    const isActive = bookingServiceType === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => handleServiceTypeChange(opt.id)}
+                        className={`relative rounded-xl border-2 p-3 text-center transition-all duration-200 ${
+                          isActive ? opt.bgColor + ' shadow-lg' : 'border-white/20 bg-white/40 hover:border-white/40 dark:border-white/10 dark:bg-white/5'
+                        }`}
+                      >
+                        <span className="block text-lg">{opt.icon}</span>
+                        <span className={`mt-1 block text-[11px] font-semibold ${isActive ? opt.color : 'text-slate-600 dark:text-slate-300'}`}>
+                          {ui.language === 'ar' ? opt.labelAr : opt.labelEn}
+                        </span>
+                        {opt.discount && isActive ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="mt-0.5 text-[9px] text-slate-400 line-through">{opt.originalPrice} {ui.language === 'ar' ? 'ج.م' : 'EGP'}</span>
+                            <span className={`mt-0.5 block text-[10px] font-bold ${opt.color}`}>{opt.price} {ui.language === 'ar' ? 'ج.م' : 'EGP'}</span>
+                          </div>
+                        ) : (
+                          <span className={`mt-0.5 block text-[10px] font-bold ${isActive ? opt.color : 'text-slate-500'}`}>
+                            {opt.price} {ui.language === 'ar' ? 'ج.م' : 'EGP'}
+                          </span>
+                        )}
+                        {isActive && opt.discount && (
+                          <span className="absolute -top-1.5 -left-1.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[8px] font-bold text-white">{opt.discount} خصم</span>
+                        )}
+                        {isActive && opt.badge && (
+                          <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.1em] text-amber-400">{opt.badge}</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className={`mt-3 flex items-center justify-between rounded-xl border px-4 py-2 ${
+                  bookingServiceType === 'tele-consultation' ? 'border-emerald-400/30 bg-emerald-500/10'
+                  : bookingServiceType === 'urgent-care' ? 'border-amber-400/30 bg-amber-500/10'
+                  : bookingServiceType === 'home-visit' ? 'border-rose-400/30 bg-rose-500/10'
+                  : 'border-cyan-400/20 bg-cyan-500/10'
+                }`}>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    {ui.language === 'ar' ? 'السعر النهائي:' : 'Final price:'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {serviceTypePrice.discount && (
+                      <span className="text-xs text-slate-400 line-through">{serviceTypePrice.originalPrice} {ui.language === 'ar' ? 'ج.م' : 'EGP'}</span>
+                    )}
+                    <span className={`text-base font-bold ${
+                      bookingServiceType === 'tele-consultation' ? 'text-emerald-600 dark:text-emerald-300'
+                      : bookingServiceType === 'urgent-care' ? 'text-amber-600 dark:text-amber-200'
+                      : bookingServiceType === 'home-visit' ? 'text-rose-600 dark:text-rose-200'
+                      : 'text-cyan-600 dark:text-cyan-200'
+                    }`}>
+                      {serviceTypePrice.icon} {serviceTypePrice.price} <span className="text-xs">{ui.language === 'ar' ? 'ج.م' : 'EGP'}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Home Visit Address — required when service is home-visit */}
+              {bookingServiceType === 'home-visit' ? (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-rose-600 dark:text-rose-300">
+                      {ui.language === 'ar' ? '📍 عنوان الزيارة المنزلية *' : '📍 Home visit address *'}
+                    </span>
+                    <div className="group rounded-2xl border border-rose-300/20 bg-white px-4 py-3 transition-all duration-300 focus-within:border-rose-300/60 focus-within:shadow-[0_0_0_1px_rgba(244,63,94,0.2),0_0_35px_rgba(244,63,94,0.16)] dark:bg-slate-950/70">
+                      <textarea
+                        className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 resize-none"
+                        value={homeVisitAddress}
+                        onChange={event => setHomeVisitAddress(event.target.value)}
+                        placeholder={ui.language === 'ar' ? 'اكتب العنوان بالتفصيل (شارع، مدينة، بجانب إيه)' : 'Enter your full address (street, city, landmark)'}
+                        rows={2}
+                        disabled={isLoading}
+                        required
+                      />
+                    </div>
+                  </label>
+
+                  {/* Share Location Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!navigator.geolocation) {
+                        setToast({ title: ui.language === 'ar' ? 'خطأ' : 'Error', message: ui.language === 'ar' ? 'متصفحك لا يدعم مشاركة الموقع' : 'Your browser does not support location sharing', tone: 'error' })
+                        return
+                      }
+                      setIsLocating(true)
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const lat = pos.coords.latitude
+                          const lng = pos.coords.longitude
+                          const link = `https://www.google.com/maps?q=${lat},${lng}`
+                          setHomeVisitLocationLink(link)
+                          setIsLocating(false)
+                          setToast({ title: ui.language === 'ar' ? 'تم' : 'Done', message: ui.language === 'ar' ? '✅ تم الحصول على الموقع بنجاح' : '✅ Location obtained successfully', tone: 'success' })
+                        },
+                        () => {
+                          setIsLocating(false)
+                          setToast({ title: ui.language === 'ar' ? 'خطأ' : 'Error', message: ui.language === 'ar' ? '❌ تعذر الحصول على الموقع — تأكد من تفعيل GPS واذن الموقع' : '❌ Could not get location — enable GPS and location permission', tone: 'error' })
+                        },
+                        { enableHighAccuracy: true, timeout: 15000 },
+                      )
+                    }}
+                    disabled={isLocating || isLoading}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-500/20 disabled:opacity-50 dark:text-rose-300"
+                  >
+                    {isLocating ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-rose-600/25 border-t-rose-600 dark:border-rose-300/25 dark:border-t-rose-300" />
+                        {ui.language === 'ar' ? 'جارٍ تحديد الموقع...' : 'Getting location...'}
+                      </>
+                    ) : (
+                      <>
+                        <span>📍</span>
+                        {ui.language === 'ar' ? 'مشاركة الموقع الحالي' : 'Share current location'}
+                      </>
+                    )}
+                  </button>
+
+                  {/* Show maps link if shared */}
+                  {homeVisitLocationLink ? (
+                    <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">
+                            {ui.language === 'ar' ? '🗺️ رابط الموقع' : '🗺️ Location link'}
+                          </p>
+                          <a href={homeVisitLocationLink} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-medium text-emerald-700 underline hover:text-emerald-900 dark:text-emerald-200 dark:hover:text-emerald-100">
+                            {homeVisitLocationLink}
+                          </a>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setHomeVisitLocationLink(''); setToast({ title: ui.language === 'ar' ? 'تم' : 'Done', message: ui.language === 'ar' ? 'تم إزالة رابط الموقع' : 'Location link removed', tone: 'success' }) }}
+                          className="shrink-0 rounded-lg border border-rose-300/30 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-500 hover:bg-rose-500/20 dark:text-rose-300"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <span className="block text-[10px] text-rose-500 dark:text-rose-400">
+                    {ui.language === 'ar' ? '⚠️ مطلوب — العنوان أو مشاركة الموقع سيتم إرسالهم في واتساب للطبيب' : '⚠️ Required — address or shared location will be sent to the doctor via WhatsApp'}
+                  </span>
+                </div>
+              ) : null}
+
               {isVet ? (
                 <>
                   <label className="block">
@@ -4404,9 +4821,11 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
               className={`mt-6 overflow-hidden rounded-2xl border px-4 py-4 transition-all duration-500 ${
                 isSuccess
                   ? 'border-emerald-300/40 bg-emerald-400/10 shadow-[0_0_30px_rgba(16,185,129,0.18)]'
-                  : status === 'error'
-                    ? 'border-rose-300/30 bg-rose-500/10'
-                    : 'border-white/10 bg-white/5'
+                  : isWaPending
+                    ? 'border-amber-300/40 bg-amber-400/10 shadow-[0_0_30px_rgba(251,191,36,0.18)]'
+                    : status === 'error'
+                      ? 'border-rose-300/30 bg-rose-500/10'
+                      : 'border-white/10 bg-white/5'
               }`}
               role="status"
               aria-live="polite"
@@ -4416,15 +4835,19 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
                   className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
                     isSuccess
                       ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-200'
-                      : status === 'error'
-                        ? 'border-rose-300/30 bg-rose-500/15 text-rose-200'
-                        : 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100'
+                      : isWaPending
+                        ? 'border-amber-300/40 bg-amber-400/15 text-amber-200'
+                        : status === 'error'
+                          ? 'border-rose-300/30 bg-rose-500/15 text-rose-200'
+                          : 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100'
                   }`}
                 >
                   {isSuccess ? (
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
                       <path d="M20 7L10.5 16.5L4 10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
+                  ) : isWaPending ? (
+                    <MessageCircleMore className="h-5 w-5" />
                   ) : status === 'error' ? (
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
                       <path d="M12 9V13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
@@ -4438,20 +4861,56 @@ function BookingPage({ doctorLookup, loading, notice, ui }) {
 
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">
-                    {isSuccess ? t('successTitle') : status === 'error' ? t('errorTitle') : t('readyStatus')}
+                    {isSuccess ? t('successTitle') : isWaPending ? (ui.language === 'ar' ? '📲 تأكيد واتساب مطلوب' : '📲 WhatsApp confirmation required') : status === 'error' ? t('errorTitle') : t('readyStatus')}
                   </p>
                   {isSuccess ? (
                     <div className="mt-2 space-y-3">
                       <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{feedback || t('successMessage')}</p>
+                      <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-xs text-slate-600 dark:text-slate-300">
+                        <p><strong>{ui.language === 'ar' ? 'الخدمة' : 'Service'}:</strong> {serviceTypePrice.icon} {ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}</p>
+                        <p><strong>{ui.language === 'ar' ? 'السعر' : 'Price'}:</strong> {serviceTypePrice.price} ج.م</p>
+                      </div>
+                    </div>
+                  ) : isWaPending ? (
+                    <div className="mt-2 space-y-3">
+                      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{feedback}</p>
+                      <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-xs text-slate-600 dark:text-slate-300">
+                        <p className="mb-2"><strong>{ui.language === 'ar' ? 'نوع الحجز' : 'Booking type'}:</strong> {serviceTypePrice.icon} {ui.language === 'ar' ? serviceTypePrice.labelAr : serviceTypePrice.labelEn}</p>
+                        <p><strong>{ui.language === 'ar' ? 'السعر' : 'Price'}:</strong> {serviceTypePrice.price} ج.م</p>
+                      </div>
                       {selectedDoctor?.phone_number ? (
-                        <a
-                          href={whatsappLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-400/20 dark:text-emerald-100 dark:hover:bg-emerald-400/20"
-                        >
-                          {t('whatsappCta')}
-                        </a>
+                        <div className="flex flex-col gap-2">
+                          {!waConfirmed ? (
+                            <>
+                              <a
+                                href={whatsappLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={() => setTimeout(() => setWaConfirmed(true), 1000)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/30 bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600"
+                              >
+                                <MessageCircleMore className="h-4 w-4" />
+                                {ui.language === 'ar' ? '📲 أرسل واتساب للطبيب لتأكيد الحجز' : '📲 Send WhatsApp to doctor to confirm'}
+                              </a>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                {ui.language === 'ar' ? '⚠️ الحجز لن يتم تأكيده إلا بعد إرسال رسالة واتساب للطبيب' : '⚠️ Booking is confirmed only after sending WhatsApp to the doctor'}
+                              </p>
+                            </>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-center text-sm font-bold text-emerald-600 dark:text-emerald-300">
+                                ✅ {ui.language === 'ar' ? 'تم إرسال رسالة واتساب بنجاح' : 'WhatsApp sent successfully'}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => navigate('/booking-success', { state: bookingData })}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/30 transition hover:bg-cyan-600"
+                              >
+                                🎫 {ui.language === 'ar' ? 'اذهب إلى التذكرة' : 'Go to ticket'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <p className="text-sm text-amber-700 dark:text-amber-100">{t('whatsappMissing')}</p>
                       )}

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   BrowserRouter,
   Navigate,
@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom'
 import { supabase } from './supabaseClient.js'
 import DoctorCard, { type Doctor } from './DoctorCard'
+type BookingType = 'tele-consultation' | 'clinic-visit' | 'urgent-care'
 import DoctorProfilePageNew from './components/DoctorProfilePageNew.jsx'
 import EnhancedBookingFlow from './components/EnhancedBookingFlow.jsx'
 import AIChatWidget from './components/AIChatWidget.jsx'
@@ -282,13 +283,188 @@ function HomePage({
   notice: string
 }) {
   const [activeTab, setActiveTab] = useState<'human' | 'veterinary'>('human')
+  const [bookingType, setBookingType] = useState<BookingType | null>(null)
 
   const humanDoctors = doctors.filter((d) => d.category !== 'veterinary')
   const vetDoctors = doctors.filter((d) => d.category === 'veterinary')
 
+  const handleBookingTypeSelect = useCallback((type: BookingType) => {
+    setBookingType((prev) => (prev === type ? null : type))
+  }, [])
+
   return (
     <AppShell>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Triple Hero Cards — Service Selection (inline, no external component) */}
+      <div style={{ border: '3px solid red', padding: '20px', margin: '20px 0', background: 'rgba(255,0,0,0.1)' }}>
+        <div style={{ border: '2px solid cyan', padding: '10px', marginBottom: '20px', textAlign: 'center' }}>
+          <p style={{ color: '#67e8f9', fontSize: '12px', letterSpacing: '0.45em', textTransform: 'uppercase' }}>Our Services</p>
+          <h2 style={{ color: 'white', fontSize: '30px', fontWeight: '600', marginTop: '8px' }}>
+            اختر نوع الخدمة
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '8px' }}>
+            استشارة هاتفية، كشف عادي، أو كشف عاجل — احجز ما يناسبك
+          </p>
+        </div>
+
+        {/* 3 Service Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', direction: 'rtl' }}>
+          {/* استشارة هاتفية */}
+          <button
+            type="button"
+            onClick={() => handleBookingTypeSelect('tele-consultation')}
+            style={{
+              border: '2px solid rgba(168,85,247,0.4)',
+              borderRadius: '24px',
+              padding: '0',
+              background: 'transparent',
+              cursor: 'pointer',
+              overflow: 'hidden',
+              transition: 'all 0.2s',
+            }}
+          >
+            <div style={{
+              padding: '24px',
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(168,85,247,0.2), rgba(217,70,239,0.15))',
+              backdropFilter: 'blur(16px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              height: '100%',
+              borderRadius: '24px',
+            }}>
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '16px',
+                background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '36px', marginBottom: '20px',
+              }}>
+                📞
+              </div>
+              <h3 style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px' }}>
+                استشارة هاتفية
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '14px', textAlign: 'center', lineHeight: '1.625' }}>
+                تحدث مع طبيبك الآن من منزلك
+              </p>
+              <div style={{ marginTop: 'auto', paddingTop: '20px', width: '100%' }}>
+                <div style={{
+                  width: '100%', borderRadius: '12px', padding: '10px 0',
+                  textAlign: 'center', fontSize: '14px', fontWeight: 'bold',
+                  color: 'white', background: 'rgba(147,51,234,0.8)',
+                  border: '1px solid rgba(192,132,252,0.3)',
+                }}>
+                  احجز استشارتك
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* كشف العيادة */}
+          <button
+            type="button"
+            onClick={() => handleBookingTypeSelect('clinic-visit')}
+            style={{
+              border: '2px solid rgba(96,165,250,0.3)',
+              borderRadius: '24px', padding: '0',
+              background: 'transparent', cursor: 'pointer',
+              overflow: 'hidden', transition: 'all 0.2s',
+            }}
+          >
+            <div style={{
+              padding: '24px',
+              background: 'linear-gradient(135deg, rgba(14,165,233,0.25), rgba(37,99,235,0.2), rgba(8,145,178,0.15))',
+              backdropFilter: 'blur(16px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              height: '100%', borderRadius: '24px',
+            }}>
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '16px',
+                background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '36px', marginBottom: '20px',
+              }}>
+                🩺
+              </div>
+              <h3 style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px' }}>
+                كشف العيادة
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '14px', textAlign: 'center', lineHeight: '1.625' }}>
+                احجز موعدك التقليدي في العيادة
+              </p>
+              <div style={{ marginTop: 'auto', paddingTop: '20px', width: '100%' }}>
+                <div style={{
+                  width: '100%', borderRadius: '12px', padding: '10px 0',
+                  textAlign: 'center', fontSize: '14px', fontWeight: 'bold',
+                  color: 'white', background: 'rgba(37,99,235,0.8)',
+                  border: '1px solid rgba(96,165,250,0.3)',
+                }}>
+                  احجز موعدك
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* كشف عاجل */}
+          <button
+            type="button"
+            onClick={() => handleBookingTypeSelect('urgent-care')}
+            style={{
+              border: '2px solid rgba(251,191,36,0.4)',
+              borderRadius: '24px', padding: '0',
+              background: 'transparent', cursor: 'pointer',
+              overflow: 'hidden', transition: 'all 0.2s',
+            }}
+          >
+            <div style={{
+              padding: '24px',
+              background: 'linear-gradient(135deg, #020617, #030712, #09090b)',
+              backdropFilter: 'blur(16px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              height: '100%', borderRadius: '24px', position: 'relative',
+            }}>
+              <div style={{
+                position: 'absolute', top: '-1px', left: '50%',
+                transform: 'translateX(-50%)',
+                borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px',
+                padding: '4px 16px', fontSize: '12px', fontWeight: 'bold',
+                color: 'white', background: 'linear-gradient(135deg, #f59e0b, #eab308)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              }}>
+                الأكثر طلباً ⭐
+              </div>
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '16px',
+                background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '36px', marginBottom: '20px',
+              }}>
+                ⚡
+              </div>
+              <h3 style={{ color: '#fde68a', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px' }}>
+                كشف عاجل
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '14px', textAlign: 'center', lineHeight: '1.625' }}>
+                الأكثر طلباً للحالات الطارئة
+              </p>
+              <div style={{ marginTop: 'auto', paddingTop: '20px', width: '100%' }}>
+                <div style={{
+                  width: '100%', borderRadius: '12px', padding: '10px 0',
+                  textAlign: 'center', fontSize: '14px', fontWeight: 'bold',
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #f59e0b, #eab308)',
+                  boxShadow: '0 4px 12px rgba(245,158,11,0.3)',
+                }}>
+                  احجز كشف عاجل
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-8 border-t border-white/5" />
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Doctors Section */}
         <section className="lg:col-span-2">
           <div className="mb-10">

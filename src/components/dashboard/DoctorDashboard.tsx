@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
@@ -56,6 +56,7 @@ type Appointment = {
   appointment_date: string
   appointment_time: string
   status: 'booked' | 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pharmacy'
+  service_type?: 'normal' | 'phone' | 'urgent'
 }
 
 type DoctorProfile = {
@@ -64,6 +65,7 @@ type DoctorProfile = {
   specialty: string
   phone_number: string
   clinic_status: 'open' | 'break' | 'closed'
+  base_price?: number
 }
 
 type EhrNote = {
@@ -83,14 +85,14 @@ const DEMO_DOCTOR: DoctorProfile = {
 }
 
 const DEMO_APPOINTMENTS: Appointment[] = [
-  { id: 'a1', patient_name: 'مريم حسن', patient_phone: '201001234567', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '09:00', status: 'completed' },
-  { id: 'a2', patient_name: 'خالد عمر', patient_phone: '201009876543', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '09:30', status: 'in_progress' },
-  { id: 'a3', patient_name: 'سارة محمود', patient_phone: '201005551234', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '10:00', status: 'waiting' },
-  { id: 'a4', patient_name: 'أحمد عبد الله', patient_phone: '201003332211', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '10:30', status: 'waiting' },
-  { id: 'a5', patient_name: 'نورة يوسف', patient_phone: '201007778899', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '11:00', status: 'booked' },
-  { id: 'a6', patient_name: 'محمود علي', patient_phone: '201004445566', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '11:30', status: 'booked' },
-  { id: 'a7', patient_name: 'فاطمة أحمد', patient_phone: '201001112233', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '12:00', status: 'booked' },
-  { id: 'a8', patient_name: 'يوسف إبراهيم', patient_phone: '201007776655', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '13:00', status: 'cancelled' },
+  { id: 'a1', patient_name: 'مريم حسن', patient_phone: '201001234567', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '09:00', status: 'completed', service_type: 'normal' },
+  { id: 'a2', patient_name: 'خالد عمر', patient_phone: '201009876543', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '09:30', status: 'in_progress', service_type: 'normal' },
+  { id: 'a3', patient_name: 'سارة محمود', patient_phone: '201005551234', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '10:00', status: 'waiting', service_type: 'phone' },
+  { id: 'a4', patient_name: 'أحمد عبد الله', patient_phone: '201003332211', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '10:30', status: 'waiting', service_type: 'urgent' },
+  { id: 'a5', patient_name: 'نورة يوسف', patient_phone: '201007778899', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '11:00', status: 'booked', service_type: 'phone' },
+  { id: 'a6', patient_name: 'محمود علي', patient_phone: '201004445566', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '11:30', status: 'booked', service_type: 'normal' },
+  { id: 'a7', patient_name: 'فاطمة أحمد', patient_phone: '201001112233', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '12:00', status: 'booked', service_type: 'urgent' },
+  { id: 'a8', patient_name: 'يوسف إبراهيم', patient_phone: '201007776655', appointment_date: new Date().toISOString().slice(0, 10), appointment_time: '13:00', status: 'cancelled', service_type: 'normal' },
 ]
 
 const DEMO_EHR: Record<string, EhrNote[]> = {
@@ -187,6 +189,25 @@ function openWhatsApp(phone: string, message: string) {
   if (n) window.open(`https://wa.me/${n}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
 }
 
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as never as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    gain.gain.setValueAtTime(0.5, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.6)
+    setTimeout(() => ctx.close(), 1000)
+  } catch {
+    // Beep audio unavailable — silently ignore
+  }
+}
+
 const DELAY_TEMPLATES = [
   { delay: 10, label: '١٠ دقائق', msg: (p: string, d: string) => `السلام عليكم ${p} 🌿 موعدك مع د. ${d} اتأخر ١٠ دقائق. نشكر تفهمك.` },
   { delay: 15, label: '١٥ دقيقة', msg: (p: string, d: string) => `أهلاً ${p} 🌿 د. ${d} اعتذر عن التأخير ١٥ دقيقة. هنتشرف بيك قريباً.` },
@@ -218,6 +239,13 @@ type TriageEntry = {
   created_at: string
 }
 
+function calcPrice(basePrice: number, serviceType: string): number {
+  const bp = basePrice || 100
+  if (serviceType === 'phone') return Math.round(bp * 0.7)
+  if (serviceType === 'urgent') return Math.round(bp * 1.5)
+  return bp // normal / clinic
+}
+
 export function DoctorDashboard() {
   const navigate = useNavigate()
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null)
@@ -235,6 +263,8 @@ export function DoctorDashboard() {
   const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; appointment: Appointment | null }>({ open: false, appointment: null })
   const [delayModal, setDelayModal] = useState<{ open: boolean; appointment: Appointment | null }>({ open: false, appointment: null })
   const [, setDelayMinutes] = useState(15)
+  const [basePriceEdit, setBasePriceEdit] = useState('')
+  const [basePriceSaving, setBasePriceSaving] = useState(false)
 
   const loadData = useCallback(async () => {
     setBootLoading(true); setError('')
@@ -242,12 +272,12 @@ export function DoctorDashboard() {
     const currentUser = authData?.user
     if (!currentUser) { setIsDemo(true); setDoctor(DEMO_DOCTOR); setAppointments(DEMO_APPOINTMENTS); setBootLoading(false); return }
 
-    const { data: doctorRow } = await supabase.from('doctors').select('id, name, specialty, phone_number, clinic_status').eq('user_id', currentUser.id).maybeSingle()
+    const { data: doctorRow } = await supabase.from('doctors').select('id, name, specialty, phone_number, clinic_status, base_price, price_value').eq('user_id', currentUser.id).maybeSingle()
     if (!doctorRow?.id) { setIsDemo(true); setDoctor(DEMO_DOCTOR); setAppointments(DEMO_APPOINTMENTS); setBootLoading(false); return }
 
-    setDoctor({ id: String(doctorRow.id), name: String(doctorRow.name ?? 'الدكتور'), specialty: String(doctorRow.specialty ?? ''), phone_number: String(doctorRow.phone_number ?? ''), clinic_status: (doctorRow.clinic_status as DoctorProfile['clinic_status']) || 'open' })
+    setDoctor({ id: String(doctorRow.id), name: String(doctorRow.name ?? 'الدكتور'), specialty: String(doctorRow.specialty ?? ''), phone_number: String(doctorRow.phone_number ?? ''), clinic_status: (doctorRow.clinic_status as DoctorProfile['clinic_status']) || 'open', base_price: doctorRow.base_price != null ? Number(doctorRow.base_price) : (doctorRow.price_value != null ? Number(doctorRow.price_value) : 100) })
 
-    const { data: apptsRows } = await supabase.from('appointments').select('id, patient_name, patient_phone, appointment_date, appointment_time, status').eq('doctor_id', doctorRow.id).gte('appointment_date', startOfTodayISO()).lte('appointment_date', endOfTodayISO()).order('appointment_date', { ascending: true })
+    const { data: apptsRows } = await supabase.from('appointments').select('id, patient_name, patient_phone, appointment_date, appointment_time, status, service_type').eq('doctor_id', doctorRow.id).gte('appointment_date', startOfTodayISO()).lte('appointment_date', endOfTodayISO()).order('appointment_date', { ascending: true })
     setAppointments((apptsRows ?? []) as Appointment[])
 
     const { data: triageRows } = await supabase.from('triage_results').select('*').order('created_at', { ascending: false }).limit(20)
@@ -258,6 +288,8 @@ export function DoctorDashboard() {
 
   useEffect(() => { void loadData() }, [loadData])
 
+  useEffect(() => { if (doctor?.base_price != null) setBasePriceEdit(String(doctor.base_price)) }, [doctor?.base_price])
+
   useEffect(() => {
     if (!doctor?.id || isDemo) return
     const channel = supabase.channel(`doctor-dashboard-${doctor.id}`)
@@ -266,7 +298,14 @@ export function DoctorDashboard() {
         if (!row?.appointment_date) return
         const d = new Date(row.appointment_date as string); const s = new Date(startOfTodayISO()); const e = new Date(endOfTodayISO())
         if (d < s || d > e) return
-        if (payload.eventType === 'INSERT') setAppointments((prev) => [...prev, payload.new as Appointment].sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()))
+        if (payload.eventType === 'INSERT') {
+          const newAppt = payload.new as Appointment
+          setAppointments((prev) => [...prev, newAppt].sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()))
+          if (newAppt.service_type === 'urgent') {
+            playBeep()
+            setToast(`🚨 موعد عاجل جديد: ${safeString(newAppt.patient_name, 'مريض')}`)
+          }
+        }
         else if (payload.eventType === 'UPDATE') setAppointments((prev) => prev.map((item) => (item.id === (payload.new as Appointment).id ? (payload.new as Appointment) : item)))
         else if (payload.eventType === 'DELETE') setAppointments((prev) => prev.filter((item) => item.id !== (payload.old as Appointment).id))
       })
@@ -282,6 +321,9 @@ export function DoctorDashboard() {
 
   const sortedByStatus = useMemo(() => {
     return [...appointments].sort((a, b) => {
+      const urgentA = a.service_type === 'urgent' ? -1 : 0
+      const urgentB = b.service_type === 'urgent' ? -1 : 0
+      if (urgentA !== urgentB) return urgentA - urgentB
       const orderA = statusConfig[a.status]?.order ?? 99
       const orderB = statusConfig[b.status]?.order ?? 99
       if (orderA !== orderB) return orderA - orderB
@@ -300,9 +342,11 @@ export function DoctorDashboard() {
     const noShow = appointments.filter((a) => a.status === 'no_show').length
     const totalPatients = appointments.length
     const satisfactionRate = totalPatients > 0 ? Math.round((completed / totalPatients) * 100) : 98
+    const bp = doctor?.base_price ?? 100
+    const expectedRevenue = appointments.reduce((sum, a) => sum + calcPrice(bp, a.service_type ?? 'normal'), 0)
     const monthlyRevenue = 41800; const todayRevenue = completed * 350; const pendingPayments = (waiting + withDoctor) * 350
-    return { today, waiting, withDoctor, completed, pharmacy, cancelled, noShow, booked: appointments.filter(a => a.status === 'booked').length, total: totalPatients, satisfactionRate, monthlyRevenue, todayRevenue, pendingPayments }
-  }, [appointments])
+    return { today, waiting, withDoctor, completed, pharmacy, cancelled, noShow, booked: appointments.filter(a => a.status === 'booked').length, total: totalPatients, satisfactionRate, monthlyRevenue, todayRevenue, pendingPayments, expectedRevenue }
+  }, [appointments, doctor?.base_price])
 
   const mergedTriageEntries = useMemo(() => {
     const ctxIds = new Set(contextTriageEntries.map((e) => e.id))
@@ -363,6 +407,18 @@ export function DoctorDashboard() {
     try { if (!isDemo) await supabase.from('doctors').update({ clinic_status: nextStatus }).eq('id', doctor.id); setDoctor((prev) => (prev ? { ...prev, clinic_status: nextStatus } : prev)); setToast('تم تحديث حالة العيادة') } catch { setError('فشل التحديث') } finally { setActionLoading(false) }
   }
 
+  const handleBasePriceSave = async () => {
+    const val = Number(basePriceEdit)
+    if (isNaN(val) || val < 1) { setToast('❌ الرجاء إدخال قيمة صحيحة'); return }
+    if (!doctor?.id) return
+    setBasePriceSaving(true)
+    try {
+      if (!isDemo) await supabase.from('doctors').update({ base_price: val }).eq('id', doctor.id)
+      setDoctor((prev) => (prev ? { ...prev, base_price: val } : prev))
+      setToast(`✅ تم تحديث السعر الأساسي إلى ${val} ج.م`)
+    } catch { setToast('❌ فشل تحديث السعر') } finally { setBasePriceSaving(false) }
+  }
+
   if (bootLoading) return <LoadingScreen />
   if (!doctor) return <NoDoctorScreen />
 
@@ -416,6 +472,32 @@ export function DoctorDashboard() {
               </div>
             </div>
 
+            {/* Base Price Settings */}
+            <div className="space-y-2 border-t border-white/10 pt-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">السعر الأساسي</p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={basePriceEdit}
+                  onChange={(e) => setBasePriceEdit(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none transition focus:border-cyan-400/40"
+                  placeholder="مثلاً 120"
+                />
+                <button
+                  type="button"
+                  onClick={handleBasePriceSave}
+                  disabled={basePriceSaving}
+                  className="rounded-xl bg-cyan-500/20 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/30 disabled:opacity-40"
+                >
+                  {basePriceSaving ? '...' : 'حفظ'}
+                </button>
+              </div>
+              {doctor?.base_price ? (
+                <p className="text-[10px] text-slate-500">الحالي: {doctor.base_price} ج.م</p>
+              ) : null}
+            </div>
+
             <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 text-xs font-bold text-slate-900">{safeString(doctor.name?.charAt(0) || '?', '?')}</div>
               <div className="flex-1 min-w-0"><p className="truncate text-sm font-semibold text-white">{safeString(doctor.name, 'الطبيب')}</p><p className="truncate text-xs text-slate-400">{safeString(doctor.specialty, 'طبيب')}</p></div>
@@ -444,6 +526,7 @@ export function DoctorDashboard() {
             <StatCard icon={Smile} label="رضا المرضى" value={`${stats.satisfactionRate}%`} sub={`${stats.completed} مكتمل`} accent="border-cyan-400/30" />
             <StatCard icon={CalendarDays} label="مواعيد اليوم" value={String(stats.today)} sub={`${stats.waiting} انتظار · ${stats.withDoctor} مع الطبيب`} accent="border-violet-400/30" />
             <StatCard icon={TrendingUp} label="وارد اليوم" value={`${stats.todayRevenue.toLocaleString()} ج.م`} sub={`${stats.pendingPayments.toLocaleString()} ج.م معلقة`} accent="border-amber-400/30" />
+            <StatCard icon={DollarSign} label="الأرباح المتوقعة" value={`${stats.expectedRevenue.toLocaleString()} ج.م`} sub={`${stats.total} موعد`} accent="border-emerald-400/30" />
           </motion.section>
 
           <motion.div variants={itemVariants} className="flex flex-wrap gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
@@ -468,6 +551,70 @@ export function DoctorDashboard() {
                   <div className="flex flex-col items-center justify-center py-16"><CalendarCheck className="mb-4 h-16 w-16 text-slate-600" /><p className="text-lg font-semibold text-slate-300">لا توجد بيانات اليوم</p></div>
                 ) : (
                   <div className="space-y-3">
+                    {/* Urgent Appointments Section — first, most important */}
+                    {sortedByStatus.filter(a => a.service_type === 'urgent').length > 0 && (
+                      <div className="mb-2 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TriangleAlert className="h-4 w-4 text-rose-400 animate-pulse" />
+                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-rose-300">🚨 حالات عاجلة</span>
+                          <span className="mr-auto rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-200">{sortedByStatus.filter(a => a.service_type === 'urgent').length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {sortedByStatus.filter(a => a.service_type === 'urgent').map((appointment) => (
+                            <div key={appointment.id} className="rounded-xl border border-rose-400/40 bg-rose-500/[0.08] animate-pulse p-3 shadow-[0_0_15px_rgba(244,63,94,0.12)]">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <TriangleAlert className="h-4 w-4 shrink-0 text-rose-300" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-white">{safeString(appointment.patient_name, 'مريض')}</p>
+                                    <p className="text-[10px] text-rose-200/80">{safeString(appointment.patient_phone, '--')} · {appointment.appointment_time ? safeString(String(appointment.appointment_time).slice(0, 5)) : '--'}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${statusConfig[appointment.status]?.className}`}>
+                                    {statusConfig[appointment.status]?.label}
+                                  </span>
+                                  <button type="button" onClick={() => openWhatsApp(appointment.patient_phone, `🚨 عاجل: السلام عليكم ${safeString(appointment.patient_name)} 🌿 د. ${safeString(doctor?.name, 'الطبيب')} في انتظارك للكشف العاجل. تفضل بالحضور فوراً.`)} className="rounded-lg border border-emerald-400/30 bg-emerald-500/20 px-2 py-1 text-[10px] font-bold text-emerald-200 hover:bg-emerald-500/30" title="واتساب">💬</button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Phone Appointments Section — second priority */}
+                    {sortedByStatus.filter(a => a.service_type === 'phone').length > 0 && (
+                      <div className="mb-2 rounded-xl border border-violet-400/30 bg-violet-500/10 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <PhoneCall className="h-4 w-4 text-violet-400" />
+                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">📞 استشارات هاتفية</span>
+                          <span className="mr-auto rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold text-violet-200">{sortedByStatus.filter(a => a.service_type === 'phone').length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {sortedByStatus.filter(a => a.service_type === 'phone').map((appointment) => (
+                            <div key={appointment.id} className="rounded-xl border border-violet-400/40 bg-violet-500/[0.08] p-3 shadow-[0_0_15px_rgba(139,92,246,0.12)]">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <PhoneCall className="h-4 w-4 shrink-0 text-violet-300" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-white">{safeString(appointment.patient_name, 'مريض')}</p>
+                                    <p className="text-[10px] text-violet-200/80">{safeString(appointment.patient_phone, '--')} · {appointment.appointment_time ? safeString(String(appointment.appointment_time).slice(0, 5)) : '--'}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${statusConfig[appointment.status]?.className}`}>
+                                    {statusConfig[appointment.status]?.label}
+                                  </span>
+                                  <button type="button" onClick={() => openWhatsApp(appointment.patient_phone, `📞 استشارة هاتفية: السلام عليكم ${safeString(appointment.patient_name)} 🌿 د. ${safeString(doctor?.name, 'الطبيب')} متاح للاستشارة الهاتفية الآن.`)} className="rounded-lg border border-emerald-400/30 bg-emerald-500/20 px-2 py-1 text-[10px] font-bold text-emerald-200 hover:bg-emerald-500/30" title="واتساب">💬</button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Triage entries — AI summaries */}
                     {mergedTriageEntries.map((entry) => {
                       const sevLabel = entry.triage_severity === 'urgent' ? 'عاجل' : entry.triage_severity === 'routine' ? 'روتيني' : 'استشارة'
@@ -492,18 +639,33 @@ export function DoctorDashboard() {
                       )
                     })}
 
-                    {sortedByStatus.map((appointment) => {
+                    {sortedByStatus.filter(a => a.service_type !== 'urgent' && a.service_type !== 'phone').map((appointment) => {
                       const aiSummary = mergedTriageEntries.find(e =>
                         e.symptoms?.toLowerCase().includes(appointment.patient_name?.toLowerCase() || '') ||
                         false
                       )
+                      return (() => {
+                      const isUrgent = appointment.service_type === 'urgent'
+                      const isPhone = appointment.service_type === 'phone'
                       return (
-                      <motion.div key={appointment.id} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-400/20 hover:bg-white/[0.07]">
+                      <motion.div key={appointment.id} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className={`group rounded-2xl border p-4 transition ${
+                        isUrgent
+                          ? 'border-rose-400/40 bg-rose-500/[0.08] animate-pulse shadow-[0_0_20px_rgba(244,63,94,0.15)]'
+                          : 'border-white/10 bg-white/[0.04] hover:border-cyan-400/20 hover:bg-white/[0.07]'
+                      }`}>
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                           <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-emerald-400/20"><UserRound className="h-5 w-5 text-cyan-300" /></div>
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${
+                              isUrgent ? 'from-rose-400/30 to-red-400/30' : 'from-cyan-400/20 to-emerald-400/20'
+                            }`}>
+                              {isUrgent ? <TriangleAlert className="h-5 w-5 text-rose-300" /> : <UserRound className="h-5 w-5 text-cyan-300" />}
+                            </div>
                             <div>
-                              <p className="font-semibold text-white">{safeString(appointment.patient_name, 'مريض')}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-white">{safeString(appointment.patient_name, 'مريض')}</p>
+                                {isUrgent && <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-bold text-rose-200 border border-rose-400/30">🚨 عاجل</span>}
+                                {isPhone && <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/20 px-1.5 py-0.5 text-[10px] font-medium text-cyan-200 border border-cyan-400/30"><PhoneCall className="h-3 w-3" />هاتفي</span>}
+                              </div>
                               <p className="mt-0.5 text-xs text-slate-400">{safeString(appointment.patient_phone, '--')}</p>
                               <p className="mt-1 text-xs text-slate-500">{appointment.appointment_time ? safeString(String(appointment.appointment_time).slice(0, 5)) : '--'}</p>
                               <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -530,6 +692,18 @@ export function DoctorDashboard() {
                               <button type="button" onClick={() => setDelayModal({ open: true, appointment })} className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-2 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20" title="إشعار تأخير"><Clock className="h-3.5 w-3.5" /></button>
                               <button type="button" onClick={() => sendPostVisit(appointment)} disabled={appointment.status !== 'completed'} className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2 py-1.5 text-xs font-semibold text-blue-200 hover:bg-blue-500/20 disabled:opacity-40" title="تعليمات ما بعد الكشف"><PhoneCall className="h-3.5 w-3.5" /></button>
                             </div>
+
+                            {/* Phone Consultation — Start WhatsApp Chat */}
+                            {isPhone && (
+                              <button
+                                type="button"
+                                onClick={() => openWhatsApp(appointment.patient_phone, `السلام عليكم ${safeString(appointment.patient_name)} 🌿 د. ${safeString(doctor?.name, 'الطبيب')} متاح للاستشارة الهاتفية الآن. تفضل بالتواصل.`)}
+                                className="rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                                title="بدء التواصل"
+                              >
+                                🎧 بدء التواصل
+                              </button>
+                            )}
 
                             {/* Quick Attendance */}
                             <div className="flex gap-1">
@@ -585,7 +759,7 @@ export function DoctorDashboard() {
                           )}
                         </AnimatePresence>
                       </motion.div>
-                    );
+                    )})();
                   })}
                   </div>
                 )}

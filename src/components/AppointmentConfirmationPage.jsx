@@ -76,7 +76,22 @@ export default function AppointmentConfirmationPage({ ui }) {
     clinicPhone = '',
     mapsUrl = 'https://maps.google.com',
     bookingRef = `HC-${Date.now().toString(36).toUpperCase()}`,
+    serviceType = 'normal',
+    servicePrice = 0,
+    homeAddress = '',
+    homeAddressLink = '',
   } = data
+
+  const serviceLabel = useMemo(() => {
+    if (!isAr) {
+      if (serviceType === 'phone') return '📞 Phone Consultation'
+      if (serviceType === 'urgent') return '⚡ Urgent Care'
+      return '🩺 Clinic Visit'
+    }
+    if (serviceType === 'phone') return '📞 استشارة هاتفية'
+    if (serviceType === 'urgent') return '🚨 كشف عاجل / زيارة منزلية'
+    return '🩺 كشف عيادة'
+  }, [serviceType, isAr])
 
   const mapsUrlNormalized = useMemo(() => normalizeMapsUrl(mapsUrl), [mapsUrl])
 
@@ -354,6 +369,16 @@ export default function AppointmentConfirmationPage({ ui }) {
                     <Stethoscope className="h-4 w-4 shrink-0" aria-hidden />
                     {specialty}
                   </p>
+                  <p className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                    serviceType === 'urgent'
+                      ? 'border-rose-400/40 bg-rose-500/10 text-rose-600 dark:text-rose-300'
+                      : serviceType === 'phone'
+                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                        : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300'
+                  }`}>
+                    {serviceLabel}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{servicePrice} ج.م</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-inner dark:border-white/10 dark:bg-slate-950">
                   <div
@@ -372,14 +397,61 @@ export default function AppointmentConfirmationPage({ ui }) {
                     {whenLabel}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-white/10 dark:bg-slate-950/50">
+                <div className={`rounded-2xl border px-4 py-3 ${
+                  serviceType === 'urgent'
+                    ? 'border-rose-300/60 bg-rose-50 dark:border-rose-400/20 dark:bg-rose-950/30'
+                    : serviceType === 'phone'
+                      ? 'border-emerald-200/80 bg-emerald-50 dark:border-emerald-400/20 dark:bg-emerald-950/30'
+                      : 'border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-slate-950/50'
+                }`}>
                   <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">{isAr ? 'المريض' : 'Patient'}</p>
                   <p className="mt-1 text-sm font-semibold">{patientName}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{patientPhone}</p>
+                  {serviceType === 'phone' ? (
+                    <p className="mt-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">{isAr ? '📞 سيتم الاتصال بك هاتفياً' : '📞 You will be called by phone'}</p>
+                  ) : serviceType === 'urgent' ? (
+                    <p className="mt-1 text-[10px] font-semibold text-rose-600 dark:text-rose-300">{isAr ? '🚨 سيتم التوجه إليك فوراً' : '🚨 A doctor will be dispatched to you urgently'}</p>
+                  ) : null}
                 </div>
               </div>
             </div>
           </div>
+
+          {serviceType === 'phone' ? (
+            <motion.div variants={fadeUp} className="mt-4 rounded-2xl border border-emerald-200/80 bg-emerald-50 px-4 py-4 dark:border-emerald-400/20 dark:bg-emerald-950/25">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-700 dark:text-emerald-300">{isAr ? '📞 تعليمات الاستشارة الهاتفية' : '📞 Phone consultation instructions'}</p>
+              <p className="mt-2 text-sm text-emerald-800 dark:text-emerald-200">{isAr ? 'سيتم الاتصال بك من قبل الطبيب في الموعد المحدد. يرجى التأكد من أن هاتفك متاح.' : 'The doctor will call you at the scheduled time. Please ensure your phone is available.'}</p>
+            </motion.div>
+          ) : serviceType === 'urgent' ? (
+            <motion.div variants={fadeUp} className="mt-4 rounded-2xl border border-rose-200/80 bg-rose-50 px-4 py-4 dark:border-rose-400/20 dark:bg-rose-950/25">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-rose-700 dark:text-rose-300">{isAr ? '🚨 تعليمات الزيارة العاجلة' : '🚨 Urgent visit instructions'}</p>
+              {homeAddress ? (
+                <div className="mt-2 rounded-xl border border-rose-300/40 bg-rose-500/10 px-3 py-2">
+                  <p className="text-[10px] font-semibold text-rose-500 dark:text-rose-400">{isAr ? '📍 عنوان الزيارة' : '📍 Visit address'}</p>
+                  <p className="mt-1 text-sm font-bold text-rose-700 dark:text-rose-200">{homeAddress}</p>
+                </div>
+              ) : null}
+              {homeAddressLink ? (
+                <div className="mt-2 rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-3 py-2">
+                  <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">{isAr ? '🗺️ رابط الموقع' : '🗺️ Location link'}</p>
+                  <a href={homeAddressLink} target="_blank" rel="noreferrer" className="mt-1 block text-xs font-medium text-emerald-700 underline hover:text-emerald-900 dark:text-emerald-200 dark:hover:text-emerald-100">
+                    {homeAddressLink}
+                  </a>
+                </div>
+              ) : null}
+              <p className="mt-2 text-sm text-rose-800 dark:text-rose-200">{isAr ? 'سيتم التوجه إليك فوراً. يرجى التأكد من أن عنوانك صحيح وأنك متاح لاستقبال الفريق الطبي.' : 'A medical team will be dispatched to you immediately. Please ensure your address is correct.'}</p>
+            </motion.div>
+          ) : (
+            <motion.div variants={fadeUp} className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/50 px-4 py-4 dark:border-blue-400/20 dark:bg-blue-950/25">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-700 dark:text-blue-300">{isAr ? '📍 موقع العيادة' : '📍 Clinic location'}</p>
+              <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{clinicAddress || (isAr ? '—' : '—')}</p>
+              {mapsUrl ? (
+                <a href={mapsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                  {isAr ? '📍 فتح في خرائط Google' : '📌 Open in Google Maps'}
+                </a>
+              ) : null}
+            </motion.div>
+          )}
 
           <motion.div
             variants={fadeUp}
@@ -460,27 +532,64 @@ export default function AppointmentConfirmationPage({ ui }) {
 
           <div style={{ borderRadius: 14, padding: 16, background: '#ffffff', border: '1px solid #e2e8f0', marginBottom: 16 }}>
             <p style={{ margin: 0, fontSize: 11, color: '#64748b', fontWeight: 600, letterSpacing: '0.06em' }}>
-              {isAr ? 'موقع العيادة' : 'Clinic location'}
+              {isAr ? 'نوع الخدمة' : 'Service type'}
             </p>
-            <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.55, fontWeight: 600 }}>
-              {clinicAddress || (isAr ? '—' : '—')}
+            <p style={{ margin: '10px 0 0', fontSize: 16, lineHeight: 1.55, fontWeight: 700 }}>
+              {serviceLabel}
             </p>
-            <p style={{ margin: '14px 0 4px', fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-              {isAr ? 'رابط الخرائط (انسخه أو امسح QR)' : 'Maps link (copy or scan QR)'}
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                lineHeight: 1.45,
-                wordBreak: 'break-all',
-                fontFamily: 'ui-monospace, monospace',
-                color: '#1d4ed8',
-              }}
-            >
-              {mapsUrlNormalized}
-            </p>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>{servicePrice} ج.م</p>
           </div>
+
+          {serviceType === 'phone' ? (
+            <div style={{ borderRadius: 14, padding: 16, background: '#ecfdf5', border: '1px solid #a7f3d0', marginBottom: 16 }}>
+              <p style={{ margin: 0, fontSize: 11, color: '#047857', fontWeight: 600, letterSpacing: '0.06em' }}>
+                {isAr ? '📞 تعليمات الاستشارة الهاتفية' : '📞 Phone consultation instructions'}
+              </p>
+              <p style={{ margin: '10px 0 0', fontSize: 13, lineHeight: 1.65, color: '#065f46' }}>
+                {isAr
+                  ? 'سيتم الاتصال بك من قبل الطبيب في الموعد المحدد. يرجى التأكد من أن هاتفك متاح.'
+                  : 'The doctor will call you at the scheduled time. Please ensure your phone is available.'}
+              </p>
+            </div>
+          ) : serviceType === 'urgent' ? (
+            <div style={{ borderRadius: 14, padding: 16, background: '#fff1f2', border: '1px solid #fecdd3', marginBottom: 16 }}>
+              <p style={{ margin: 0, fontSize: 11, color: '#be123c', fontWeight: 600, letterSpacing: '0.06em' }}>
+                {isAr ? '🚨 زيارة منزلية عاجلة' : '🚨 Urgent home visit'}
+              </p>
+              {homeAddress ? (
+                <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: '#ffe4e6', border: '1px solid #fecdd3' }}>
+                  <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: '#be123c' }}>{isAr ? '📍 العنوان' : '📍 Address'}</p>
+                  <p style={{ margin: '6px 0 0', fontSize: 14, fontWeight: 700, color: '#881337' }}>{homeAddress}</p>
+                </div>
+              ) : null}
+              {homeAddressLink ? (
+                <div style={{ marginTop: 8, padding: 10, borderRadius: 10, background: '#d1fae5', border: '1px solid #a7f3d0' }}>
+                  <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: '#047857' }}>{isAr ? '🗺️ رابط الموقع' : '🗺️ Location link'}</p>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#065f46', wordBreak: 'break-all' }}>{homeAddressLink}</p>
+                </div>
+              ) : null}
+              <p style={{ margin: '10px 0 0', fontSize: 13, lineHeight: 1.65, color: '#881337' }}>
+                {isAr
+                  ? 'سيتم التوجه إليك فوراً. يرجى التأكد من أن عنوانك صحيح وأنك متاح لاستقبال الفريق الطبي.'
+                  : 'A medical team will be dispatched to you immediately. Please ensure your address is correct.'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ borderRadius: 14, padding: 16, background: '#ffffff', border: '1px solid #e2e8f0', marginBottom: 16 }}>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b', fontWeight: 600, letterSpacing: '0.06em' }}>
+                {isAr ? 'موقع العيادة' : 'Clinic location'}
+              </p>
+              <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.55, fontWeight: 600 }}>
+                {clinicAddress || (isAr ? '—' : '—')}
+              </p>
+              <p style={{ margin: '14px 0 4px', fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                {isAr ? 'رابط الخرائط (انسخه أو امسح QR)' : 'Maps link (copy or scan QR)'}
+              </p>
+              <p style={{ margin: 0, fontSize: 11, lineHeight: 1.45, wordBreak: 'break-all', fontFamily: 'ui-monospace, monospace', color: '#1d4ed8' }}>
+                {mapsUrlNormalized}
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
             {qrDataUrl ? (
